@@ -162,11 +162,16 @@ class DatapipeForQuestionAnswering(Datapipe):
         return dataset
 
     def _to_dict(self, dataset: tf.data.Dataset, to_dict=True, start_key="start", end_key="end", **kwargs) -> tf.data.Dataset:
+        num_parallel_calls = kwargs.get("num_parallel_calls", utils.AUTOTUNE)
         if not to_dict:
+            dataset = dataset.map(
+                lambda a, b, c, x, y: ((a, b, c), (x, y)),
+                num_parallel_calls=num_parallel_calls,
+            )
             return dataset
         dataset = dataset.map(
             lambda a, b, c, x, y: ({"input_ids": a, "segment_ids": b, "attention_mask": c}, {start_key: x, end_key: y}),
-            num_parallel_calls=kwargs.get("num_parallel_calls", utils.AUTOTUNE),
+            num_parallel_calls=num_parallel_calls,
         ).prefetch(kwargs.get("buffer_size", utils.AUTOTUNE))
         return dataset
 
