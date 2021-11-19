@@ -8,7 +8,7 @@ except:
     AUTOTUNE = tf.data.experimental.AUTOTUNE
 
 
-class AbcDataset(abc.ABC):
+class AbcDatapipe(abc.ABC):
     """Abstract dataset"""
 
     def __call__(self, dataset: tf.data.Dataset, **kwargs) -> tf.data.Dataset:

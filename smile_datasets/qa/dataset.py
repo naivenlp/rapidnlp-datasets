@@ -4,7 +4,7 @@ from typing import Dict, List
 
 import tensorflow as tf
 from smile_datasets import utils
-from smile_datasets.dataset import AbcDataset
+from smile_datasets.dataset import AbcDatapipe
 from tokenizers import BertWordPieceTokenizer
 
 from .example import ExampleForQuestionAnswering
@@ -43,7 +43,7 @@ class DatasetForQuestionAnswering(abc.ABC):
         utils.save_tfrecord(iter(self), _encoding, output_files, **kwargs)
 
 
-class DatapipeForQuestionAnswering(AbcDataset):
+class DatapipeForQuestionAnswering(AbcDatapipe):
     """ """
 
     def __init__(self, **kwargs) -> None:
