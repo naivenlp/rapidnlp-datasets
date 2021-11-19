@@ -112,10 +112,15 @@ class DatapipeForQuestionAnswering(AbcDatapipe):
         examples = []
         parser = ParserForQuestionAnswering(tokenizer=tokenizer, vocab_file=vocab_file, **kwargs)
         for instance in instances:
+            if not instance:
+                continue
             e = parser.parse(instance, **kwargs)
             if not e:
                 continue
             examples.append(e)
+        if not examples:
+            logging.warning("examples is empty or null, skipped to build dataset.")
+            return None
         logging.info("Read %d examples in total.", len(examples))
         return cls.from_examples(examples, **kwargs)
 
@@ -123,7 +128,13 @@ class DatapipeForQuestionAnswering(AbcDatapipe):
     def from_dataset(cls, dataset: DatasetForQuestionAnswering, **kwargs) -> tf.data.Dataset:
         examples = []
         for idx in range(len(dataset)):
-            examples.append(dataset[idx])
+            e = dataset[idx]
+            if not e:
+                continue
+            examples.append(e)
+        if not examples:
+            logging.warning("examples is empty or null, skipped to build dataset.")
+            return None
         return cls.from_examples(examples, **kwargs)
 
     @classmethod
@@ -146,13 +157,36 @@ class DatapipeForQuestionAnswering(AbcDatapipe):
             )
         )
 
-        return d(dataset, **kwargs)
+        return d(
+            dataset,
+            batch_size=kwargs.pop("batch_size", 32),
+            max_sequence_length=kwargs.pop("max_sequence_length", 512),
+            pad_id=kwargs.pop("pad_id", 0),
+            padding_strategy=kwargs.pop("padding_strategy", "bucket"),
+            bucket_batch_sizes=kwargs.pop("bucket_batch_sizes", None),
+            bucket_boundaries=kwargs.pop("bucket_boundaries", [64, 128, 192, 256, 320, 384, 448]),
+            do_filter=kwargs.pop("do_filter", True),
+            do_repeat=kwargs.pop("do_repeat", False),
+            repeat_count=kwargs.pop("repeat_count", None),
+            do_shuffle=kwargs.pop("do_shuffle", True),
+            shuffle_buffer_size=kwargs.pop("shuffle_buffer_size", 1000000),
+            shuffle_seed=kwargs.pop("shuffle_seed", None),
+            reshuffle_each_iteration=kwargs.pop("reshuffle_each_iteration", True),
+            to_dict=kwargs.pop("to_dict", True),
+            start_key=kwargs.pop("start_key", "start"),
+            end_key=kwargs.pop("end_key", "end"),
+            **kwargs,
+        )
 
-    def _filter(self, dataset: tf.data.Dataset, max_sequence_length=512, **kwargs) -> tf.data.Dataset:
+    def _filter(self, dataset: tf.data.Dataset, do_filter=True, max_sequence_length=512, **kwargs) -> tf.data.Dataset:
+        if not do_filter:
+            return dataset
         dataset = dataset.filter(lambda a, b, c, x, y: tf.size(a) <= max_sequence_length)
         return dataset
 
-    def _to_dict(self, dataset: tf.data.Dataset, start_key="start", end_key="end", **kwargs) -> tf.data.Dataset:
+    def _to_dict(self, dataset: tf.data.Dataset, to_dict=True, start_key="start", end_key="end", **kwargs) -> tf.data.Dataset:
+        if not to_dict:
+            return dataset
         dataset = dataset.map(
             lambda a, b, c, x, y: ({"input_ids": a, "segment_ids": b, "attention_mask": c}, {start_key: x, end_key: y}),
             num_parallel_calls=kwargs.get("num_parallel_calls", utils.AUTOTUNE),
@@ -169,7 +203,7 @@ class DatapipeForQuestionAnswering(AbcDatapipe):
         return dataset
 
     def _fixed_padding(self, dataset: tf.data.Dataset, **kwargs) -> tf.data.Dataset:
-        maxlen = tf.constant(kwargs.get("max_sequence_length", 0), dtype=tf.int32)
+        maxlen = tf.constant(kwargs.get("max_sequence_length", 512), dtype=tf.int32)
         pad_id = tf.constant(kwargs.get("pad_id", 0), dtype=tf.int32)
         # fmt: off
         padded_shapes = kwargs.get("padded_shapes", ([maxlen, ], [maxlen, ], [maxlen, ], [], []))
