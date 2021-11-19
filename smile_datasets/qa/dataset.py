@@ -3,8 +3,8 @@ import logging
 from typing import Dict, List
 
 import tensorflow as tf
-from datasets import utils
-from datasets.dataset import AbcDataset
+from smile_datasets import utils
+from smile_datasets.dataset import AbcDataset
 from tokenizers import BertWordPieceTokenizer
 
 from .example import ExampleForQuestionAnswering

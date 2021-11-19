@@ -1,10 +1,10 @@
 import os
 import unittest
 
-from datasets.qa import readers
-from datasets.qa.dataset import DatapipeForQuestionAnswering, DatasetForQuestionAnswering
-from datasets.qa.example import ExampleForQuestionAnswering
-from datasets.qa.parsers import ParserForQuestionAnswering
+from smile_datasets.qa import readers
+from smile_datasets.qa.dataset import DatapipeForQuestionAnswering, DatasetForQuestionAnswering
+from smile_datasets.qa.example import ExampleForQuestionAnswering
+from smile_datasets.qa.parsers import ParserForQuestionAnswering
 
 DUREADER_RUBOST_INPUT_FILE = os.path.join(os.environ["DUREADER_ROBUST_PATH"], "dev.json")
 DUREADER_CHECKLIST_INPUT_FILE = os.path.join(os.environ["DUREADER_CHECKLIST_PATH"], "dev.json")
@@ -39,6 +39,11 @@ class DatasetTest(unittest.TestCase):
             print(e)
             if idx == 5:
                 break
+
+        dataset = DatapipeForQuestionAnswering.from_dataset(d)
+        print()
+        print(next(iter(dataset)))
+
         d.save_tfrecord("testdata/dureader_rubost_dev.tfrecord")
 
         dataset = DatapipeForQuestionAnswering.from_tfrecord_files("testdata/dureader_rubost_dev.tfrecord")
@@ -51,6 +56,11 @@ class DatasetTest(unittest.TestCase):
             print(e)
             if idx == 5:
                 break
+
+        dataset = DatapipeForQuestionAnswering.from_dataset(d)
+        print()
+        print(next(iter(dataset)))
+
         d.save_tfrecord("testdata/dureader_checklist_dev.tfrecord")
 
         dataset = DatapipeForQuestionAnswering.from_tfrecord_files("testdata/dureader_checklist_dev.tfrecord")
