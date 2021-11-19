@@ -107,6 +107,8 @@ def save_tfrecord(examples, fn, output_files, **kwargs):
     writers = [tf.io.TFRecordWriter(f) for f in output_files]
     idx, c = 0, 0
     for example in examples:
+        if not example:
+            continue
         try:
             feature = fn(example, **kwargs)
             record = tf.train.Example(features=tf.train.Features(feature=feature))

@@ -24,23 +24,27 @@ class AbcDatapipe(abc.ABC):
     def _filter(self, dataset: tf.data.Dataset, **kwargs) -> tf.data.Dataset:
         raise NotImplementedError()
 
-    def _repeat(self, dataset: tf.data.Dataset, repeat=None, **kwargs) -> tf.data.Dataset:
-        if repeat is None:
+    def _repeat(self, dataset: tf.data.Dataset, do_repeat=False, repeat_count=None, **kwargs) -> tf.data.Dataset:
+        if not do_repeat:
             return dataset
-        return dataset.repeat(repeat)
+        if repeat_count is None:
+            return dataset
+        return dataset.repeat(repeat_count)
 
     def _shuffle(
         self,
         dataset: tf.data.Dataset,
-        shuffle=True,
-        buffer_size=100000,
-        seed=None,
+        do_shuffle=True,
+        shuffle_buffer_size=100000,
+        shuffle_seed=None,
         reshuffle_each_iteration=True,
         **kwargs,
     ) -> tf.data.Dataset:
-        if not shuffle:
+        if not do_shuffle:
             return dataset
-        dataset = dataset.shuffle(buffer_size=buffer_size, seed=seed, reshuffle_each_iteration=reshuffle_each_iteration)
+        dataset = dataset.shuffle(
+            buffer_size=shuffle_buffer_size, seed=shuffle_seed, reshuffle_each_iteration=reshuffle_each_iteration
+        )
         return dataset
 
     def _padding(self, dataset: tf.data.Dataset, padding_strategy="bucket", **kwargs) -> tf.data.Dataset:
