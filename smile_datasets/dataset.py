@@ -2,22 +2,84 @@ import abc
 
 import tensorflow as tf
 
-try:
-    AUTOTUNE = tf.data.AUTOTUNE
-except:
-    AUTOTUNE = tf.data.experimental.AUTOTUNE
 
-
-class AbcDatapipe(abc.ABC):
+class Dataset(abc.ABC):
     """Abstract dataset"""
 
-    def __call__(self, dataset: tf.data.Dataset, **kwargs) -> tf.data.Dataset:
-        dataset = self._filter(dataset, **kwargs)
-        dataset = self._repeat(dataset, **kwargs)
-        dataset = self._shuffle(dataset, **kwargs)
-        dataset = self._padding(dataset, **kwargs)
-        dataset = self._to_dict(dataset, **kwargs)
-        dataset = self._auto_shard(dataset, **kwargs)
+    @abc.abstractmethod
+    def __len__(self):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def __getitem__(self, index):
+        raise NotImplementedError()
+
+    def __iter__(self):
+        for idx in range(len(self)):
+            yield self[idx]
+
+    @abc.abstractmethod
+    def save_tfrecord(self, output_files, **kwargs):
+        raise NotImplementedError()
+
+
+class Datapipe(abc.ABC):
+    """Abstract dataset"""
+
+    @classmethod
+    def from_tfrecord_files(cls, input_files, **kwargs) -> tf.data.Dataset:
+        raise NotImplementedError()
+
+    @classmethod
+    def from_dataset(cls, dataset: Dataset, **kwargs) -> tf.data.Dataset:
+        raise NotImplementedError()
+
+    def __call__(
+        self,
+        dataset: tf.data.Dataset,
+        batch_size=32,
+        pad_id=0,
+        max_sequence_length=512,
+        padding_strategy="bucket",
+        num_buckets=8,
+        bucket_boundaries=[64, 128, 192, 256, 320, 384, 448],
+        bucket_batch_sizes=None,
+        drop_remainder=False,
+        do_filter=True,
+        do_repeat=False,
+        repeat_count=None,
+        do_shuffle=True,
+        shuffle_buffer_size=1000000,
+        shuffle_seed=None,
+        reshuffle_each_iteration=True,
+        to_dict=True,
+        auto_shard_policy=None,
+        **kwargs,
+    ) -> tf.data.Dataset:
+        dataset = self._filter(dataset, do_filter=do_filter, max_sequence_length=max_sequence_length, **kwargs)
+        dataset = self._repeat(dataset, do_repeat=do_repeat, repeat_count=repeat_count, **kwargs)
+        dataset = self._shuffle(
+            dataset,
+            do_shuffle=do_shuffle,
+            shuffle_buffer_size=shuffle_buffer_size,
+            shuffle_seed=shuffle_seed,
+            reshuffle_each_iteration=reshuffle_each_iteration,
+            **kwargs,
+        )
+        dataset = self._padding(
+            dataset,
+            batch_size=batch_size,
+            pad_id=pad_id,
+            padding_strategy=padding_strategy,
+            max_sequence_length=max_sequence_length,
+            num_buckets=num_buckets,
+            bucket_boundaries=bucket_boundaries,
+            bucket_batch_sizes=bucket_batch_sizes,
+            drop_remainder=drop_remainder,
+            **kwargs,
+        )
+        dataset = self._to_dict(dataset, to_dict=to_dict, **kwargs)
+        dataset = self._auto_shard(dataset, auto_shard_policy=auto_shard_policy, **kwargs)
         return dataset
 
     @abc.abstractmethod
@@ -47,27 +109,77 @@ class AbcDatapipe(abc.ABC):
         )
         return dataset
 
-    def _padding(self, dataset: tf.data.Dataset, padding_strategy="bucket", **kwargs) -> tf.data.Dataset:
+    def _padding(
+        self,
+        dataset: tf.data.Dataset,
+        batch_size=32,
+        pad_id=0,
+        max_sequence_length=512,
+        padding_strategy="bucket",
+        bucket_boundaries=[64, 128, 192, 256, 320, 384, 448],
+        bucket_batch_sizes=None,
+        num_buckets=8,
+        drop_remainder=False,
+        **kwargs,
+    ) -> tf.data.Dataset:
         if padding_strategy == "fixed":
-            return self._fixed_padding(dataset, **kwargs)
+            return self._fixed_padding(
+                dataset,
+                batch_size=batch_size,
+                pad_id=pad_id,
+                max_sequence_length=max_sequence_length,
+                drop_remainder=drop_remainder,
+                **kwargs,
+            )
         if padding_strategy == "batch":
-            return self._batch_padding(dataset, **kwargs)
-        return self._bucket_padding(dataset, **kwargs)
+            return self._batch_padding(
+                dataset,
+                batch_size=batch_size,
+                pad_id=pad_id,
+                drop_remainder=drop_remainder,
+                **kwargs,
+            )
+        return self._bucket_padding(
+            dataset,
+            batch_size=batch_size,
+            pad_id=pad_id,
+            max_sequence_length=max_sequence_length,
+            bucket_boundaries=bucket_boundaries,
+            bucket_batch_sizes=bucket_batch_sizes,
+            num_buckets=num_buckets,
+            drop_remainder=drop_remainder,
+            **kwargs,
+        )
 
     @abc.abstractmethod
-    def _fixed_padding(self, dataset: tf.data.Dataset, **kwargs) -> tf.data.Dataset:
+    def _fixed_padding(
+        self, dataset: tf.data.Dataset, batch_size=32, pad_id=0, max_sequence_length=512, drop_remainder=False, **kwargs
+    ) -> tf.data.Dataset:
         raise NotImplementedError("Fixed padding not supported yet!")
 
     @abc.abstractmethod
-    def _batch_padding(self, dataset: tf.data.Dataset, **kwargs) -> tf.data.Dataset:
+    def _batch_padding(
+        self, dataset: tf.data.Dataset, batch_size=32, pad_id=0, drop_remainder=False, **kwargs
+    ) -> tf.data.Dataset:
         raise NotImplementedError("Batch padding is not supported yet!")
 
     @abc.abstractmethod
-    def _bucket_padding(self, dataset: tf.data.Dataset, **kwargs) -> tf.data.Dataset:
+    def _bucket_padding(
+        self,
+        dataset: tf.data.Dataset,
+        batch_size=32,
+        pad_id=0,
+        max_sequence_length=512,
+        bucket_boundaries=[64, 128, 192, 256, 320, 384, 448],
+        bucket_batch_sizes=None,
+        num_buckets=8,
+        drop_remainder=False,
+        **kwargs,
+    ) -> tf.data.Dataset:
         raise NotImplementedError("Bucket padding is not supported yet!")
 
     @abc.abstractmethod
-    def _to_dict(self, dataset: tf.data.Dataset, **kwargs) -> tf.data.Dataset:
+    def _to_dict(self, dataset: tf.data.Dataset, to_dict=True, **kwargs) -> tf.data.Dataset:
         raise NotImplementedError()
 
     def _auto_shard(self, dataset: tf.data.Dataset, auto_shard_policy=None, **kwargs) -> tf.data.Dataset:

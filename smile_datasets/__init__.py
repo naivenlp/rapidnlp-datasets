@@ -1,5 +1,6 @@
 import logging
 
+from smile_datasets.dataset import Datapipe
 from smile_datasets.qa.dataset import DatapipeForQuestionAnswering, DatasetForQuestionAnswering
 from smile_datasets.qa.example import ExampleForQuestionAnswering
 from smile_datasets.qa.parsers import ParserForQuestionAnswering

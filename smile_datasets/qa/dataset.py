@@ -4,7 +4,7 @@ from typing import Dict, List
 
 import tensorflow as tf
 from smile_datasets import utils
-from smile_datasets.dataset import AbcDatapipe
+from smile_datasets.dataset import Datapipe, Dataset
 from tokenizers import BertWordPieceTokenizer
 
 from .example import ExampleForQuestionAnswering
@@ -12,7 +12,7 @@ from .parsers import ParserForQuestionAnswering
 from .readers import read_dureader_checklist, read_dureader_rubost, read_jsonl_files
 
 
-class DatasetForQuestionAnswering(abc.ABC):
+class DatasetForQuestionAnswering(Dataset):
     """ """
 
     @abc.abstractmethod
@@ -22,10 +22,6 @@ class DatasetForQuestionAnswering(abc.ABC):
     @abc.abstractmethod
     def __getitem__(self, index) -> ExampleForQuestionAnswering:
         raise NotImplementedError()
-
-    def __iter__(self) -> ExampleForQuestionAnswering:
-        for idx in range(len(self)):
-            yield self[idx]
 
     def save_tfrecord(self, output_files, **kwargs):
         """Save examples to tfrecord"""
@@ -43,8 +39,8 @@ class DatasetForQuestionAnswering(abc.ABC):
         utils.save_tfrecord(iter(self), _encoding, output_files, **kwargs)
 
 
-class DatapipeForQuestionAnswering(AbcDatapipe):
-    """ """
+class DatapipeForQuestionAnswering(Datapipe):
+    """Datapipe for question answering."""
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
@@ -156,27 +152,8 @@ class DatapipeForQuestionAnswering(AbcDatapipe):
                 _to_dataset(x=[e.end for e in examples], dtype=tf.int32),
             )
         )
-
-        return d(
-            dataset,
-            batch_size=kwargs.pop("batch_size", 32),
-            max_sequence_length=kwargs.pop("max_sequence_length", 512),
-            pad_id=kwargs.pop("pad_id", 0),
-            padding_strategy=kwargs.pop("padding_strategy", "bucket"),
-            bucket_batch_sizes=kwargs.pop("bucket_batch_sizes", None),
-            bucket_boundaries=kwargs.pop("bucket_boundaries", [64, 128, 192, 256, 320, 384, 448]),
-            do_filter=kwargs.pop("do_filter", True),
-            do_repeat=kwargs.pop("do_repeat", False),
-            repeat_count=kwargs.pop("repeat_count", None),
-            do_shuffle=kwargs.pop("do_shuffle", True),
-            shuffle_buffer_size=kwargs.pop("shuffle_buffer_size", 1000000),
-            shuffle_seed=kwargs.pop("shuffle_seed", None),
-            reshuffle_each_iteration=kwargs.pop("reshuffle_each_iteration", True),
-            to_dict=kwargs.pop("to_dict", True),
-            start_key=kwargs.pop("start_key", "start"),
-            end_key=kwargs.pop("end_key", "end"),
-            **kwargs,
-        )
+        # do transformation
+        return d(dataset, **kwargs)
 
     def _filter(self, dataset: tf.data.Dataset, do_filter=True, max_sequence_length=512, **kwargs) -> tf.data.Dataset:
         if not do_filter:
