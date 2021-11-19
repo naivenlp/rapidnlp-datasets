@@ -1,8 +1,19 @@
+.idea/
+.vscode/
+log/
+logs/
+testdata
+
+models/
+*.imp
+*.pyc
+.DS_Store
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
-
+*.ipynb
 # C extensions
 *.so
 
@@ -20,6 +31,7 @@ parts/
 sdist/
 var/
 wheels/
+
 pip-wheel-metadata/
 share/python-wheels/
 *.egg-info/
@@ -48,6 +60,7 @@ nosetests.xml
 coverage.xml
 *.cover
 *.py,cover
+
 .hypothesis/
 .pytest_cache/
 
@@ -97,6 +110,11 @@ __pypackages__/
 # Celery stuff
 celerybeat-schedule
 celerybeat.pid
+# pyenv
+.python-version
+
+# celery beat schedule file
+celerybeat-schedule
 
 # SageMath parsed files
 *.sage.py
@@ -122,6 +140,7 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
 .dmypy.json
 dmypy.json
 
