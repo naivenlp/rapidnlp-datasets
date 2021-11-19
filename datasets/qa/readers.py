@@ -1,8 +1,4 @@
-import abc
 import json
-import logging
-import os
-from typing import Dict, List
 
 
 def read_dureader_rubost(input_files, **kwargs):
@@ -42,3 +38,23 @@ def read_dureader_checklist(input_files, **kwargs):
                     answer = qa["answers"][0]["text"]
                     instance = {"context": title + context, "question": question, "answer": answer, "id": qa["id"]}
                     yield instance
+
+
+def read_jsonl_files(input_files, context_key="context", question_key="question", answers_key="answer", id_key="id", **kwargs):
+    if isinstance(input_files, str):
+        input_files = [input_files]
+    _id = 0
+    for input_file in input_files:
+        with open(input_file, mode="rt", encoding="utf-8") as fin:
+            for line in fin:
+                data = json.loads(line)
+                answers = data[answers_key]
+                if not answers:
+                    continue
+                if not isinstance(answers, list):
+                    answers = [answers]
+                answer = answers[0]
+                instance_id = data.get(id_key, _id)
+                _id += 1
+                instance = {"context": data[context_key], "question": data[question_key], "answer": answer, "id": instance_id}
+                yield instance

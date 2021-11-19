@@ -1,6 +1,5 @@
 import abc
 import logging
-import os
 from typing import Dict, List
 
 import tensorflow as tf
@@ -10,7 +9,7 @@ from tokenizers import BertWordPieceTokenizer
 
 from .example import ExampleForQuestionAnswering
 from .parsers import ParserForQuestionAnswering
-from .readers import read_dureader_checklist, read_dureader_rubost
+from .readers import read_dureader_checklist, read_dureader_rubost, read_jsonl_files
 
 
 class DatasetForQuestionAnswering(abc.ABC):
@@ -82,19 +81,34 @@ class DatapipeForQuestionAnswering(AbcDataset):
         return d(dataset, **kwargs)
 
     @classmethod
-    def from_dureader_robust(cls, input_files, **kwargs) -> tf.data.Dataset:
+    def from_dureader_robust(cls, input_files, tokenizer=None, vocab_file=None, **kwargs) -> tf.data.Dataset:
         instances = read_dureader_rubost(input_files, **kwargs)
-        return cls.from_instances(instances, **kwargs)
+        return cls.from_instances(instances, tokenizer=tokenizer, vocab_file=vocab_file, **kwargs)
 
     @classmethod
-    def from_dureader_checklist(cls, input_files, **kwargs) -> tf.data.Dataset:
+    def from_dureader_checklist(cls, input_files, tokenizer=None, vocab_file=None, **kwargs) -> tf.data.Dataset:
         instances = read_dureader_checklist(input_files, **kwargs)
-        return cls.from_instances(instances, **kwargs)
+        return cls.from_instances(instances, tokenizer=tokenizer, vocab_file=vocab_file, **kwargs)
+
+    @classmethod
+    def from_jsonl_files(cls, input_files, tokenizer=None, vocab_file=None, **kwargs) -> tf.data.Dataset:
+        instances = read_jsonl_files(input_files, **kwargs)
+        return cls.from_instances(instances, tokenizer=tokenizer, vocab_file=vocab_file, **kwargs)
 
     @classmethod
     def from_instances(
         cls, instances: List[Dict], tokenizer: BertWordPieceTokenizer = None, vocab_file=None, **kwargs
     ) -> tf.data.Dataset:
+        """Build tf.data.Dataset from json instances.
+
+        Args:
+            instances: List instance of dict, each instance contains keys `context`, `question`, `answer` and `id`
+            tokenizer: Tokenizer used to tokenize text
+            vocab_file: The vocab path to build tokenizer. The `tokenizer` or `vocab_file` must be provided!
+
+        Returns:
+            Instance of tf.data.Dataset, can be used to fit to tf.keras.Model directly.
+        """
         examples = []
         parser = ParserForQuestionAnswering(tokenizer=tokenizer, vocab_file=vocab_file, **kwargs)
         for instance in instances:
@@ -115,16 +129,32 @@ class DatapipeForQuestionAnswering(AbcDataset):
     @classmethod
     def from_examples(cls, examples: List[ExampleForQuestionAnswering], **kwargs) -> tf.data.Dataset:
         d = cls(**kwargs)
-        dataset = d._zip_dataset(examples, **kwargs)
+
+        def _to_dataset(x, dtype=tf.int32):
+            x = tf.ragged.constant(x, dtype=dtype)
+            d = tf.data.Dataset.from_tensor_slices(x)
+            d = d.map(lambda x: x)
+            return d
+
+        dataset = tf.data.Dataset.zip(
+            (
+                _to_dataset(x=[e.input_ids for e in examples], dtype=tf.int32),
+                _to_dataset(x=[e.segment_ids for e in examples], dtype=tf.int32),
+                _to_dataset(x=[e.attention_mask for e in examples], dtype=tf.int32),
+                _to_dataset(x=[e.start for e in examples], dtype=tf.int32),
+                _to_dataset(x=[e.end for e in examples], dtype=tf.int32),
+            )
+        )
+
         return d(dataset, **kwargs)
 
     def _filter(self, dataset: tf.data.Dataset, max_sequence_length=512, **kwargs) -> tf.data.Dataset:
         dataset = dataset.filter(lambda a, b, c, x, y: tf.size(a) <= max_sequence_length)
         return dataset
 
-    def _to_dict(self, dataset: tf.data.Dataset, **kwargs) -> tf.data.Dataset:
+    def _to_dict(self, dataset: tf.data.Dataset, start_key="start", end_key="end", **kwargs) -> tf.data.Dataset:
         dataset = dataset.map(
-            lambda a, b, c, x, y: ({"input_ids": a, "segment_ids": b, "attention_mask": c}, {"head": x, "tail": y}),
+            lambda a, b, c, x, y: ({"input_ids": a, "segment_ids": b, "attention_mask": c}, {start_key: x, end_key: y}),
             num_parallel_calls=kwargs.get("num_parallel_calls", utils.AUTOTUNE),
         ).prefetch(kwargs.get("buffer_size", utils.AUTOTUNE))
         return dataset
@@ -160,25 +190,5 @@ class DatapipeForQuestionAnswering(AbcDataset):
             padded_shapes=padded_shapes,
             padding_values=padding_values,
             **kwargs,
-        )
-        return dataset
-
-    def _zip_dataset(self, examples: List[ExampleForQuestionAnswering], **kwargs) -> tf.data.Dataset:
-        """Zip examples to tf.data.Dataset"""
-
-        def _to_dataset(x, dtype=tf.int32):
-            x = tf.ragged.constant(x, dtype=dtype)
-            d = tf.data.Dataset.from_tensor_slices(x)
-            d = d.map(lambda x: x)
-            return d
-
-        dataset = tf.data.Dataset.zip(
-            (
-                _to_dataset(x=[e.input_ids for e in examples], dtype=tf.int32),
-                _to_dataset(x=[e.segment_ids for e in examples], dtype=tf.int32),
-                _to_dataset(x=[e.attention_mask for e in examples], dtype=tf.int32),
-                _to_dataset(x=[e.start for e in examples], dtype=tf.int32),
-                _to_dataset(x=[e.end for e in examples], dtype=tf.int32),
-            )
         )
         return dataset
