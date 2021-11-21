@@ -1,10 +1,10 @@
 import os
 import unittest
 
-from smile_datasets.qa import readers
-from smile_datasets.qa.dataset import DatapipeForQuestionAnswering, DatasetForQuestionAnswering
-from smile_datasets.qa.example import ExampleForQuestionAnswering
-from smile_datasets.qa.parsers import ParserForQuestionAnswering
+from smile_datasets.question_answering import readers
+from smile_datasets.question_answering.dataset import DatapipeForQuestionAnswering, DatasetForQuestionAnswering
+from smile_datasets.question_answering.example import ExampleForQuestionAnswering
+from smile_datasets.question_answering.parsers import ParserForQuestionAnswering
 
 DUREADER_RUBOST_INPUT_FILE = os.path.join(os.environ["DUREADER_ROBUST_PATH"], "dev.json")
 DUREADER_CHECKLIST_INPUT_FILE = os.path.join(os.environ["DUREADER_CHECKLIST_PATH"], "dev.json")
