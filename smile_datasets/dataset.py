@@ -34,6 +34,10 @@ class Datapipe(abc.ABC):
     def from_dataset(cls, dataset: Dataset, **kwargs) -> tf.data.Dataset:
         raise NotImplementedError()
 
+    @classmethod
+    def from_examples(cls, examples, **kwargs) -> tf.data.Dataset:
+        raise NotImplementedError()
+
     def __call__(
         self,
         dataset: tf.data.Dataset,
