@@ -1,6 +1,6 @@
 import logging
 
-from smile_datasets.dataset import Datapipe
+from smile_datasets.dataset import Datapipe, Dataset
 from smile_datasets.mlm.dataset import DatapipeForMaksedLanguageModel, DatasetForMaskedLanguageModel
 from smile_datasets.mlm.example import ExampleForMaskedLanguageModel
 from smile_datasets.mlm.masking_strategy import WholeWordMask
@@ -22,6 +22,6 @@ from smile_datasets.token_classification.parsers import ParserForTokenClassifica
 from smile_datasets.token_classification.tokenizers import BertCharLevelTokenizer, LabelTokenizerForTokenClassification
 
 __name__ = "smile_datasets"
-__version__ = "0.0.3"
+__version__ = "0.0.4"
 
 logging.basicConfig(format="%(asctime)s %(levelname)7s %(filename)20s %(lineno)4d] %(message)s", level=logging.INFO)
