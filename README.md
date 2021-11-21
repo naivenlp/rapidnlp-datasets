@@ -87,7 +87,7 @@ class DuReaderDatasetForQuestionAnswering(DatasetForQuestionAnswering):
         return self.examples[index]
 
 
-dataset = MyDatasetForQuestionAnswering(input_files=["data/trian.jsonl"], vocab_file="bert/vocab.txt")
+dataset = DuReaderDatasetForQuestionAnswering(input_files=["data/trian.jsonl"], vocab_file="bert/vocab.txt")
 train_dataset = DatapipeForQuestionAnswering.from_dataset(dataset, batch_size=32)
 
 # check dataset
@@ -99,7 +99,7 @@ print(next(iter(train_dataset)))
 model.fit(train_dataset, callbacks=[...])
 ```
 
-For better performance, you can convert examples to `tfrecord` in ahead, and then build datapipe from tfrecord files directly:
+For better performance, you can convert `dataset` to `tfrecord` ahead of time, and then build datapipe from tfrecord files directly:
 
 ```python
 # save dataset in tfrecord format
