@@ -1,6 +1,10 @@
 import logging
 
 from smile_datasets.dataset import Datapipe
+from smile_datasets.mlm.dataset import DatapipeForMaksedLanguageModel, DatasetForMaskedLanguageModel
+from smile_datasets.mlm.example import ExampleForMaskedLanguageModel
+from smile_datasets.mlm.masking_strategy import WholeWordMask
+from smile_datasets.mlm.parsers import ParserForMasledLanguageModel
 from smile_datasets.question_answering.dataset import DatapipeForQuestionAnswering, DatasetForQuestionAnswering
 from smile_datasets.question_answering.example import ExampleForQuestionAnswering
 from smile_datasets.question_answering.parsers import ParserForQuestionAnswering

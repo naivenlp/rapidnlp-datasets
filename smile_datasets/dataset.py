@@ -28,14 +28,27 @@ class Datapipe(abc.ABC):
 
     @classmethod
     def from_tfrecord_files(cls, input_files, **kwargs) -> tf.data.Dataset:
+        """Build tf.data.Dataset from tfrecord files."""
+        raise NotImplementedError()
+
+    @classmethod
+    def from_jsonl_files(cls, input_files, **kwargs) -> tf.data.Dataset:
+        """Build tf.data.Dataset from jsonl files."""
+        raise NotImplementedError()
+
+    @classmethod
+    def from_instances(cls, instances, **kwargs) -> tf.data.Dataset:
+        """Build tf.data.Dataset from json instances."""
         raise NotImplementedError()
 
     @classmethod
     def from_dataset(cls, dataset: Dataset, **kwargs) -> tf.data.Dataset:
+        """Build tf.data.Dataset from instances of Dataset."""
         raise NotImplementedError()
 
     @classmethod
     def from_examples(cls, examples, **kwargs) -> tf.data.Dataset:
+        """Build tf.data.Dataset from list of examples."""
         raise NotImplementedError()
 
     def __call__(
