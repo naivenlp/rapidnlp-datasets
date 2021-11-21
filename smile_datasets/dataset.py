@@ -87,7 +87,7 @@ class Datapipe(abc.ABC):
         return dataset
 
     @abc.abstractmethod
-    def _filter(self, dataset: tf.data.Dataset, **kwargs) -> tf.data.Dataset:
+    def _filter(self, dataset: tf.data.Dataset, do_filter=True, max_sequence_length=512, **kwargs) -> tf.data.Dataset:
         raise NotImplementedError()
 
     def _repeat(self, dataset: tf.data.Dataset, do_repeat=False, repeat_count=None, **kwargs) -> tf.data.Dataset:
