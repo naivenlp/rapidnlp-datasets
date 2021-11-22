@@ -5,7 +5,7 @@ from typing import List
 import tensorflow as tf
 from smile_datasets import utils
 from smile_datasets.dataset import Datapipe, Dataset
-from smile_datasets.mlm.parsers import ParserForMasledLanguageModel
+from smile_datasets.mlm.parsers import ParserForMaskedLanguageModel
 from tokenizers import BertWordPieceTokenizer
 
 from . import readers
@@ -80,7 +80,7 @@ class DatapipeForMaksedLanguageModel(Datapipe):
 
     @classmethod
     def from_instances(cls, instances, tokenizer: BertWordPieceTokenizer = None, vocab_file=None, **kwargs) -> tf.data.Dataset:
-        parser = ParserForMasledLanguageModel(tokenizer=tokenizer, vocab_file=vocab_file, **kwargs)
+        parser = ParserForMaskedLanguageModel(tokenizer=tokenizer, vocab_file=vocab_file, **kwargs)
         examples = []
         for instance in instances:
             if not instance:

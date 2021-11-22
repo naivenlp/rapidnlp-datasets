@@ -3,7 +3,7 @@ import unittest
 from smile_datasets.mlm import readers
 from smile_datasets.mlm.dataset import DatapipeForMaksedLanguageModel, DatasetForMaskedLanguageModel
 from smile_datasets.mlm.example import ExampleForMaskedLanguageModel
-from smile_datasets.mlm.parsers import ParserForMasledLanguageModel
+from smile_datasets.mlm.parsers import ParserForMaskedLanguageModel
 
 
 class MyDatasetForMaskedLanguageModel(DatasetForMaskedLanguageModel):
@@ -12,7 +12,7 @@ class MyDatasetForMaskedLanguageModel(DatasetForMaskedLanguageModel):
     def __init__(self, input_files, vocab_file, **kwargs) -> None:
         super().__init__()
         examples = []
-        parser = ParserForMasledLanguageModel.from_vocab_file(vocab_file, **kwargs)
+        parser = ParserForMaskedLanguageModel.from_vocab_file(vocab_file, **kwargs)
         for instance in readers.read_jsonl_files(input_files, **kwargs):
             e = parser.parse(instance, **kwargs)
             if not e:

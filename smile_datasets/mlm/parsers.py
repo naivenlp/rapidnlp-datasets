@@ -4,7 +4,7 @@ from .example import ExampleForMaskedLanguageModel
 from .masking_strategy import WholeWordMask
 
 
-class ParserForMasledLanguageModel:
+class ParserForMaskedLanguageModel:
     """ """
 
     @classmethod
