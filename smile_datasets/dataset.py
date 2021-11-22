@@ -26,6 +26,9 @@ class Dataset(abc.ABC):
 class Datapipe(abc.ABC):
     """Abstract dataset"""
 
+    def __init__(self, **kwargs) -> None:
+        super().__init__()
+
     @classmethod
     def from_tfrecord_files(cls, input_files, **kwargs) -> tf.data.Dataset:
         """Build tf.data.Dataset from tfrecord files."""
