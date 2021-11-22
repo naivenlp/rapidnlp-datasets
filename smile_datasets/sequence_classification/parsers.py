@@ -18,12 +18,10 @@ class ParserForSequenceClassification:
         assert tokenizer or vocab_file, "`tokenizer` or `vocab_file` must be provided!"
         self.tokenizer = tokenizer or BertWordPieceTokenizer.from_file(vocab_file, lowercase=do_lower_case)
 
-    def parse(
-        self, instance, sequence_key="sequence", pair_key="pair", label_key="label", add_special_tokens=True, **kwargs
-    ) -> ExampleForSequenceClassification:
-        sequence = instance[sequence_key]
-        pair = instance.get(pair_key, None)
-        label = int(instance[label_key])
+    def parse(self, instance, add_special_tokens=True, **kwargs) -> ExampleForSequenceClassification:
+        sequence = instance["sequence"]
+        pair = instance.get("pair", None)
+        label = int(instance["label"])
         encoding = self.tokenizer.encode(sequence, pair=pair, add_special_tokens=add_special_tokens)
         example = ExampleForSequenceClassification(
             tokens=encoding.tokens,

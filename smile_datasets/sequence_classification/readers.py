@@ -9,6 +9,9 @@ def read_jsonl_files(input_files, sequence_key="sequence", label_key="label", pa
     for f in input_files:
         with open(f, mode="rt", encoding="utf-8") as fin:
             for line in fin:
+                line = line.strip()
+                if not line:
+                    continue
                 data = json.loads(line)
                 instance = {
                     "sequence": data[sequence_key],
