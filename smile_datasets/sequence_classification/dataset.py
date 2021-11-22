@@ -5,7 +5,6 @@ from typing import Dict, List
 import tensorflow as tf
 from smile_datasets import utils
 from smile_datasets.dataset import Datapipe, Dataset
-from tensorflow._api.v2 import data
 from tokenizers import BertWordPieceTokenizer
 
 from . import readers
@@ -21,7 +20,7 @@ class DatasetForSequenceClassification(Dataset):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def __getitem__(self, index):
+    def __getitem__(self, index) -> ExampleForSequenceClassification:
         raise NotImplementedError()
 
     def save_tfrecord(self, output_files, **kwargs):

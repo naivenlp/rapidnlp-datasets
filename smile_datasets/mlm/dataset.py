@@ -1,4 +1,3 @@
-import abc
 import logging
 from typing import List
 
@@ -18,7 +17,7 @@ class DatasetForMaskedLanguageModel(Dataset):
     def __len__(self):
         return super().__len__()
 
-    def __getitem__(self, index):
+    def __getitem__(self, index) -> ExampleForMaskedLanguageModel:
         return super().__getitem__(index)
 
     def save_tfrecord(self, output_files, **kwargs):
