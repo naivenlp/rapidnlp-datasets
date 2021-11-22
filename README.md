@@ -39,7 +39,7 @@ Here is an example for question answering task, but you can use datapipe the sam
 
 from smile_datasets import DatasetForQuestionAnswering, DatapipeForQuestionAnswering
 
-
+# each line is a JSON {"sequece": "我喜欢自然语言处理(NLP)"}
 train_input_jsonl_files = ["data/train.jsonl"]
 train_dataset = DatapipeForQuestionAnswering.from_jsonl_files(
     input_files=train_input_jsonl_files, 
