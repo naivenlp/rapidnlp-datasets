@@ -22,6 +22,6 @@ from smile_datasets.token_classification.parsers import ParserForTokenClassifica
 from smile_datasets.token_classification.tokenizers import BertCharLevelTokenizer, LabelTokenizerForTokenClassification
 
 __name__ = "smile_datasets"
-__version__ = "0.0.4"
+__version__ = "0.0.5"
 
 logging.basicConfig(format="%(asctime)s %(levelname)7s %(filename)20s %(lineno)4d] %(message)s", level=logging.INFO)
