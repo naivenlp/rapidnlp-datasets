@@ -62,12 +62,18 @@ class BertCharLevelTokenizer(CharLevelTokenizer):
     def special_tokens(self):
         return [self.unk_token, self.pad_token, self.cls_token, self.sep_token, self.mask_token]
 
+    def token_to_id(self, token):
+        return self.tokenizer.token_to_id(token)
+
+    def id_to_token(self, _id):
+        return self.tokenizer.id_to_token(_id)
+
     def _to_char_level(self, encoding, **kwargs):
         tokens, ids, type_ids, attention_mask, offsets = [], [], [], [], []
         for token, _id, tid, mask, offset in zip(
             encoding.tokens, encoding.ids, encoding.type_ids, encoding.attention_mask, encoding.offsets
         ):
-            if token in self.sepcial_tokens:
+            if token in self.special_tokens:
                 tokens.append(token)
                 ids.append(_id)
                 type_ids.append(tid)
@@ -82,14 +88,14 @@ class BertCharLevelTokenizer(CharLevelTokenizer):
                 attention_mask.append(mask)
                 start = offset[0]
                 offsets.append((start + idx, start + idx + 1))
-            char_encoding = CharLevelEncoding(
-                tokens=tokens,
-                ids=ids,
-                type_ids=type_ids,
-                attention_mask=attention_mask,
-                offsets=offsets,
-            )
-            return char_encoding
+        char_encoding = CharLevelEncoding(
+            tokens=tokens,
+            ids=ids,
+            type_ids=type_ids,
+            attention_mask=attention_mask,
+            offsets=offsets,
+        )
+        return char_encoding
 
     def encode(self, sequence, pair=None, is_pretokenized=False, add_special_tokens=True):
         encoding = self.tokenizer.encode(
