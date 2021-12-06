@@ -3,16 +3,16 @@ import logging
 from typing import Dict, List
 
 import tensorflow as tf
-from . import utils
-
-from .dataset import TFDataset
-from naivenlp_datasets.question_answering_dataset import (
+from naivenlp_datasets.question_answering import (
     ExampleForQuestionAnswering,
     ExampleParserForQuestionAnswering,
     JsonlFileReaderForQuestionAnswering,
-    read_dureader_rubost,
     read_dureader_checklist,
+    read_dureader_rubost,
 )
+
+from . import utils
+from .dataset import TFDataset
 
 
 class TFDatasetForQuestionAnswering(TFDataset):
@@ -26,8 +26,8 @@ class TFDatasetForQuestionAnswering(TFDataset):
                 "input_ids": utils.int64_feature([int(x) for x in example.input_ids]),
                 "segment_ids": utils.int64_feature([int(x) for x in example.segment_ids]),
                 "attention_mask": utils.int64_feature([int(x) for x in example.attention_mask]),
-                "start": utils.int64_feature([int(example.start)]),
-                "end": utils.int64_feature([int(example.end)]),
+                "start_positions": utils.int64_feature([int(example.start_positions)]),
+                "end_positions": utils.int64_feature([int(example.end_positions)]),
             }
             return feature
 
@@ -46,8 +46,8 @@ class TFDatasetForQuestionAnswering(TFDataset):
             "input_ids": tf.io.VarLenFeature(tf.int64),
             "segment_ids": tf.io.VarLenFeature(tf.int64),
             "attention_mask": tf.io.VarLenFeature(tf.int64),
-            "start": tf.io.VarLenFeature(tf.int64),
-            "end": tf.io.VarLenFeature(tf.int64),
+            "start_positions": tf.io.VarLenFeature(tf.int64),
+            "end_positions": tf.io.VarLenFeature(tf.int64),
         }
         dataset = dataset.map(
             lambda x: tf.io.parse_example(x, features),
@@ -58,8 +58,8 @@ class TFDatasetForQuestionAnswering(TFDataset):
                 tf.cast(tf.sparse.to_dense(x["input_ids"]), tf.int32),
                 tf.cast(tf.sparse.to_dense(x["segment_ids"]), tf.int32),
                 tf.cast(tf.sparse.to_dense(x["attention_mask"]), tf.int32),
-                tf.cast(tf.squeeze(tf.sparse.to_dense(x["start"])), tf.int32),
-                tf.cast(tf.squeeze(tf.sparse.to_dense(x["end"])), tf.int32),
+                tf.cast(tf.squeeze(tf.sparse.to_dense(x["start_positions"])), tf.int32),
+                tf.cast(tf.squeeze(tf.sparse.to_dense(x["end_positions"])), tf.int32),
             ),
             num_parallel_calls=num_parallel_calls,
         ).prefetch(buffer_size)
@@ -103,7 +103,7 @@ class TFDatasetForQuestionAnswering(TFDataset):
 
     @classmethod
     def from_examples(
-        cls, examples: List[ExampleForQuestionAnswering], max_sequence_length=512, **kwargs
+        cls, examples: List[ExampleForQuestionAnswering], max_sequence_length=512, return_self=False, **kwargs
     ) -> tf.data.Dataset:
         examples = [e for e in examples if len(e.input_ids) <= max_sequence_length]
         d = cls(examples=examples, **kwargs)
@@ -119,11 +119,13 @@ class TFDatasetForQuestionAnswering(TFDataset):
                 _to_dataset(x=[e.input_ids for e in examples], dtype=tf.int32),
                 _to_dataset(x=[e.segment_ids for e in examples], dtype=tf.int32),
                 _to_dataset(x=[e.attention_mask for e in examples], dtype=tf.int32),
-                _to_dataset(x=[e.start for e in examples], dtype=tf.int32),
-                _to_dataset(x=[e.end for e in examples], dtype=tf.int32),
+                _to_dataset(x=[e.start_positions for e in examples], dtype=tf.int32),
+                _to_dataset(x=[e.end_positions for e in examples], dtype=tf.int32),
             )
         )
         # do transformation
+        if return_self:
+            return d(dataset, **kwargs), d
         return d(dataset, **kwargs)
 
     def _filter(self, dataset: tf.data.Dataset, do_filter=True, max_sequence_length=512, **kwargs) -> tf.data.Dataset:

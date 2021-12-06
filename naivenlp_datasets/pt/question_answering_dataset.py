@@ -1,10 +1,12 @@
 from typing import List
 
 import torch
-from naivenlp_datasets.question_answering_dataset import (
+from naivenlp_datasets.question_answering import (
     ExampleForQuestionAnswering,
     ExampleParserForQuestionAnswering,
     JsonlFileReaderForQuestionAnswering,
+    read_dureader_checklist,
+    read_dureader_rubost,
 )
 
 
@@ -31,6 +33,16 @@ def _padding_labels(labels):
 
 class DatasetForQuestionAnswering(torch.utils.data.Dataset):
     """Dataset for question answering in PyTorch"""
+
+    @classmethod
+    def from_dureader_robust(cls, input_files, vocab_file, tokenization="bert-wordpiece", **kwargs):
+        instances = read_dureader_rubost(input_files, **kwargs)
+        return cls.from_instances(instances, vocab_file, tokenization=tokenization, **kwargs)
+
+    @classmethod
+    def from_dureader_checklist(cls, input_files, vocab_file, tokenization="bert-charlevel", **kwargs):
+        instances = read_dureader_checklist(input_files, **kwargs)
+        return cls.from_instances(instances, vocab_file, tokenization=tokenization, **kwargs)
 
     @classmethod
     def from_jsonl_files(cls, input_files, vocab_file, tokenization="bert-wordpiece", **kwargs):
