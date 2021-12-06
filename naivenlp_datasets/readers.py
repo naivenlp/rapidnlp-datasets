@@ -68,3 +68,34 @@ class CsvFileReader(AbstractFileReader):
     @abc.abstractmethod
     def _parse_instance(self, line, sep=",", **kwargs):
         raise NotImplementedError()
+
+
+class ConllFileReader(AbstractFileReader):
+    """CONLL file reader"""
+
+    def read_files(self, input_files, feature_column=0, label_column=1, sep="\t", **kwargs):
+        if isinstance(input_files, str):
+            input_files = [input_files]
+        for f in input_files:
+            if not os.path.exists(f) or not os.path.isfile(f):
+                logging.warning("File %d does not exist, skipped.", f)
+                continue
+            feature, label = []
+            with open(f, mode="rt", encoding="utf-8") as fin:
+                for line in fin:
+                    line = line.strip()
+                    if not line:
+                        instance = self._parse_instance(feature, label, **kwargs)
+                        yield instance
+                        feature, label = [], []
+                        continue
+                    parts = re.split(sep, line)
+                    feature.append(parts[feature_column])
+                    label.append(parts[label_column])
+            if feature and label:
+                instance = self._parse_instance(feature, label, **kwargs)
+                yield instance
+
+    @abc.abstractmethod
+    def _parse_instance(self, feature, label, **kwargs):
+        raise NotImplementedError()

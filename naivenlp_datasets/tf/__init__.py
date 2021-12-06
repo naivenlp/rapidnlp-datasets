@@ -7,3 +7,4 @@ from .simcse_dataset import (
     TFDatasetForSupervisedSimCSE,
     TFDatasetForUnsupSimCSE,
 )
+from .token_classification_dataset import TFDatasetForTokenClassification
