@@ -1,7 +1,7 @@
 from typing import List
 
 import torch
-from naivenlp_datasets.sequence_classification_dataset import (
+from naivenlp_datasets.sequence_classification import (
     CsvFileReaderForSequenceClassification,
     ExampleForSequenceClassification,
     ExampleParserForSequenceClassification,
@@ -26,30 +26,30 @@ class DatasetForSequenceClassification(torch.utils.data.Dataset):
     """Dataset for sequence classification in PyTorch"""
 
     @classmethod
-    def from_jsonl_files(cls, input_files, vocab_file, **kwargs):
+    def from_jsonl_files(cls, input_files, vocab_file, label_to_id=None, **kwargs):
         reader = JsonlFileReaderForSequenceClassification()
         instances = reader.read_files(input_files, **kwargs)
-        return cls.from_instances(instances, vocab_file, **kwargs)
+        return cls.from_instances(instances, vocab_file, label_to_id=label_to_id, **kwargs)
 
     @classmethod
-    def from_csv_files(cls, input_files, vocab_file, sep=",", **kwargs):
+    def from_csv_files(cls, input_files, vocab_file, label_to_id=None, sep=",", **kwargs):
         reader = CsvFileReaderForSequenceClassification()
         instances = reader.read_files(input_files, sep=sep, **kwargs)
-        return cls.from_instances(instances, vocab_file, **kwargs)
+        return cls.from_instances(instances, vocab_file, label_to_id=label_to_id, **kwargs)
 
     @classmethod
-    def from_tsv_files(cls, input_files, vocab_file, sep="\t", **kwargs):
+    def from_tsv_files(cls, input_files, vocab_file, label_to_id=None, sep="\t", **kwargs):
         reader = CsvFileReaderForSequenceClassification()
         instances = reader.read_files(input_files, sep=sep, **kwargs)
-        return cls.from_instances(instances, vocab_file, **kwargs)
+        return cls.from_instances(instances, vocab_file, label_to_id=label_to_id, **kwargs)
 
     @classmethod
     def from_instances(
         cls,
         instances,
         vocab_file,
-        max_sequence_length=512,
         label_to_id=None,
+        max_sequence_length=512,
         do_lower_case=True,
         add_special_tokens=True,
         **kwargs

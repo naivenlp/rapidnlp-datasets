@@ -46,9 +46,8 @@ class CsvFileReaderForSequenceClassification(CsvFileReader):
 class ExampleParserForSequenceClassification:
     """Parse instance to ExampleForSequenceClassification"""
 
-    def __init__(self, vocab_file, label_to_id=None, max_sequence_length=512, do_lower_case=True, **kwargs) -> None:
+    def __init__(self, vocab_file, label_to_id=None, do_lower_case=True, **kwargs) -> None:
         self.tokenizer = BertWordPieceTokenizer.from_file(vocab_file, lowercase=do_lower_case)
-        self.max_sequence_length = max_sequence_length
         if label_to_id is None:
             label_to_id = lambda x: int(x)
         self.label_to_id = label_to_id
@@ -56,8 +55,6 @@ class ExampleParserForSequenceClassification:
     def parse_instance(self, instance, add_special_tokens=True, **kwargs) -> ExampleForSequenceClassification:
         sequence, pair = instance["sequence"], instance.get("pair", None)
         encoding = self.tokenizer.encode(sequence, pair=pair, add_special_tokens=add_special_tokens)
-        if len(encoding.ids) > self.max_sequence_length:
-            return None
         example = ExampleForSequenceClassification(
             tokens=encoding.tokens,
             input_ids=encoding.ids,

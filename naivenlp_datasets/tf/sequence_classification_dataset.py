@@ -3,16 +3,15 @@ import logging
 from typing import Dict, List
 
 import tensorflow as tf
-from . import utils
-from .dataset import TFDataset
-from tokenizers import BertWordPieceTokenizer
-
-from naivenlp_datasets.sequence_classification_dataset import (
+from naivenlp_datasets.sequence_classification import (
+    CsvFileReaderForSequenceClassification,
     ExampleForSequenceClassification,
     ExampleParserForSequenceClassification,
     JsonlFileReaderForSequenceClassification,
-    CsvFileReaderForSequenceClassification,
 )
+
+from . import utils
+from .dataset import TFDataset
 
 
 class TFDatasetForSequenceClassifiation(TFDataset):
@@ -36,7 +35,9 @@ class TFDatasetForSequenceClassifiation(TFDataset):
         utils.save_tfrecord(self.examples, _encode, output_files, **kwargs)
 
     @classmethod
-    def from_tfrecord_files(cls, input_files, num_parallel_calls=None, buffer_size=None, **kwargs) -> tf.data.Dataset:
+    def from_tfrecord_files(
+        cls, input_files, num_parallel_calls=None, buffer_size=None, return_self=False, **kwargs
+    ) -> tf.data.Dataset:
         num_parallel_calls = num_parallel_calls or utils.AUTOTUNE
         buffer_size = buffer_size or utils.AUTOTUNE
         # read files
@@ -63,46 +64,35 @@ class TFDatasetForSequenceClassifiation(TFDataset):
         ).prefetch(buffer_size)
         # do transformation
         d = cls(**kwargs)
+        if return_self:
+            return d(dataset, **kwargs), d
         return d(dataset, **kwargs)
 
     @classmethod
-    def from_jsonl_files(
-        cls, input_files, tokenizer: BertWordPieceTokenizer = None, vocab_file=None, **kwargs
-    ) -> tf.data.Dataset:
+    def from_jsonl_files(cls, input_files, vocab_file, label_to_id=None, **kwargs) -> tf.data.Dataset:
         reader = JsonlFileReaderForSequenceClassification()
         instances = reader.read_files(input_files, **kwargs)
-        return cls.from_instances(instances, tokenizer=tokenizer, vocab_file=vocab_file, **kwargs)
+        return cls.from_instances(instances, vocab_file, label_to_id=label_to_id, **kwargs)
 
     @classmethod
-    def from_csv_files(cls, input_files, sep=",", **kwargs):
+    def from_csv_files(cls, input_files, vocab_file, label_to_id=None, sep=",", **kwargs):
         reader = CsvFileReaderForSequenceClassification()
         instances = reader.read_files(input_files, sep=sep, **kwargs)
-        return cls.from_instances(instances, **kwargs)
+        return cls.from_instances(instances, vocab_file, label_to_id=label_to_id, **kwargs)
 
     @classmethod
-    def from_tsv_files(cls, input_files, sep="\t", **kwargs):
+    def from_tsv_files(cls, input_files, vocab_file, label_to_id=None, sep="\t", **kwargs):
         reader = CsvFileReaderForSequenceClassification()
         instances = reader.read_files(input_files, sep=sep, **kwargs)
-        return cls.from_instances(instances, **kwargs)
+        return cls.from_instances(instances, vocab_file, label_to_id=label_to_id, **kwargs)
 
     @classmethod
     def from_instances(
-        cls,
-        instances: List[Dict],
-        vocab_file,
-        label_to_id=None,
-        add_special_tokens=True,
-        max_sequence_length=512,
-        do_lower_case=True,
-        **kwargs
+        cls, instances: List[Dict], vocab_file, label_to_id=None, add_special_tokens=True, do_lower_case=True, **kwargs
     ) -> tf.data.Dataset:
         examples = []
         parser = ExampleParserForSequenceClassification(
-            vocab_file,
-            label_to_id=label_to_id,
-            max_sequence_length=max_sequence_length,
-            do_lower_case=do_lower_case,
-            **kwargs,
+            vocab_file, label_to_id=label_to_id, do_lower_case=do_lower_case, **kwargs
         )
         for e in parser.parse_instances(instances, add_special_tokens=add_special_tokens, **kwargs):
             if not e:
@@ -111,7 +101,10 @@ class TFDatasetForSequenceClassifiation(TFDataset):
         return cls.from_examples(examples, **kwargs)
 
     @classmethod
-    def from_examples(cls, examples: List[ExampleForSequenceClassification], **kwargs) -> tf.data.Dataset:
+    def from_examples(
+        cls, examples: List[ExampleForSequenceClassification], max_sequence_length=512, return_self=False, **kwargs
+    ) -> tf.data.Dataset:
+        examples = [e for e in examples if len(e.input_ids) <= max_sequence_length]
         if not examples:
             logging.warning("examples is empty or null, skipped to build dataset.")
             return None
@@ -131,7 +124,9 @@ class TFDatasetForSequenceClassifiation(TFDataset):
             )
         )
         # do transformation
-        d = cls(**kwargs)
+        d = cls(examples=examples, **kwargs)
+        if return_self:
+            return d(dataset, **kwargs), d
         return d(dataset, **kwargs)
 
     def _filter(self, dataset: tf.data.Dataset, do_filter=True, max_sequence_length=512, **kwargs) -> tf.data.Dataset:
