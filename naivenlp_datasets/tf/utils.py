@@ -6,7 +6,7 @@ import tensorflow as tf
 
 try:
     AUTOTUNE = tf.data.AUTOTUNE
-except:
+except Exception as e:
     AUTOTUNE = tf.data.experimental.AUTOTUNE
 
 
@@ -62,7 +62,7 @@ def bucketing_and_padding(
 
     try:
         fn = tf.data.bucket_by_sequence_length
-    except:
+    except Exception as e:
         fn = tf.data.experimental.bucket_by_sequence_length
 
     dataset = dataset.apply(

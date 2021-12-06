@@ -108,6 +108,7 @@ class TFDatasetForSequenceClassifiation(TFDataset):
         if not examples:
             logging.warning("examples is empty or null, skipped to build dataset.")
             return None
+
         # zip examples to dataset
         def _to_dataset(x, dtype=tf.int32):
             x = tf.ragged.constant(x, dtype=dtype)
