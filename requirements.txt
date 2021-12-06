@@ -1,2 +1,5 @@
 tensorflow
 tokenizers
+torch
+torchvision
+torchaudio
