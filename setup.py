@@ -4,21 +4,23 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="smile-datasets",
-    version="0.0.6",
-    description="La**S**t **mile** datasets: Use `tf.data` to solve the last mile data loading problem for tensorflow.",
+    name="naivenlp-datasets",
+    version="0.1.0",
+    description="Data pipelines for TensorFlow and PyTorch.",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/luozhouyang/smile-datasets",
+    url="https://github.com/naivenlp/naivenlp-datasets",
     author="ZhouYang Luo",
     author_email="zhouyang.luo@gmail.com",
     packages=setuptools.find_packages(),
     include_package_data=True,
     install_requires=[
         "tokenizers",
-        "tensorflow",
     ],
-    extras_require={},
+    extras_require={
+        "tf": ["tensorflow"],
+        "pt": ["torch", "torchaudio", "torchvision"],
+    },
     license="Apache Software License",
     classifiers=(
         "Programming Language :: Python :: 3",
