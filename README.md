@@ -1,6 +1,6 @@
 # smile-datasets
 
-![Python package](https://github.com/luozhouyang/naivenlp-datasets/workflows/Python%20package/badge.svg)
+![Python package](https://github.com/naivenlp/naivenlp-datasets/workflows/Python%20package/badge.svg)
 [![PyPI version](https://badge.fury.io/py/naivenlp-datasets.svg)](https://badge.fury.io/py/naivenlp-datasets)
 [![Python](https://img.shields.io/pypi/pyversions/naivenlp-datasets.svg?style=plastic)](https://badge.fury.io/py/naivenlp-datasets)
 
