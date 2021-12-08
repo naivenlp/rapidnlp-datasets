@@ -1,6 +1,6 @@
 import unittest
 
-from naivenlp_datasets.charlevel_tokenizer import BertCharLevelTokenizer
+from rapidnlp_datasets.charlevel_tokenizer import BertCharLevelTokenizer
 
 
 class CharLevelTokenizerTest(unittest.TestCase):

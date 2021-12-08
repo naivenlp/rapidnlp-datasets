@@ -1,7 +1,7 @@
 import logging
 from typing import List
 
-from naivenlp_datasets.masked_lm import (
+from rapidnlp_datasets.masked_lm import (
     CsvFileReaderForMaskedLanguageModel,
     ExampleForMaskedLanguageModel,
     ExampleParserForMaskedLanguageModel,

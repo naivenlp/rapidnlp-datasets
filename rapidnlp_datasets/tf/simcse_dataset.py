@@ -2,7 +2,7 @@ import logging
 from typing import List
 
 import tensorflow as tf
-from naivenlp_datasets.simcse import (
+from rapidnlp_datasets.simcse import (
     CsvFileReaderForSimCSE,
     ExampleForSimCSE,
     ExampleParserForSimCSE,

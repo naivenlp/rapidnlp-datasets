@@ -1,6 +1,6 @@
 from typing import List
 
-from naivenlp_datasets.token_classification import (
+from rapidnlp_datasets.token_classification import (
     ConllFileReaderForTokenClassification,
     ExampleForTokenClassification,
     ExampleParserForTokenClassification,

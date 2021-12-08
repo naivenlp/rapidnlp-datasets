@@ -4,12 +4,12 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="naivenlp-datasets",
+    name="rapidnlp-datasets",
     version="0.1.0",
     description="Data pipelines for TensorFlow and PyTorch.",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/naivenlp/naivenlp-datasets",
+    url="https://github.com/naivenlp/rapidnlp-datasets",
     author="ZhouYang Luo",
     author_email="zhouyang.luo@gmail.com",
     packages=setuptools.find_packages(),

@@ -1,7 +1,7 @@
 from typing import List
 
 import torch
-from naivenlp_datasets.sequence_classification import (
+from rapidnlp_datasets.sequence_classification import (
     CsvFileReaderForSequenceClassification,
     ExampleForSequenceClassification,
     ExampleParserForSequenceClassification,

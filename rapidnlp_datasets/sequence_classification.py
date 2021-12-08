@@ -4,7 +4,7 @@ from typing import Iterator
 
 from tokenizers import BertWordPieceTokenizer
 
-from naivenlp_datasets.readers import CsvFileReader, JsonlFileReader
+from rapidnlp_datasets.readers import CsvFileReader, JsonlFileReader
 
 ExampleForSequenceClassification = namedtuple(
     "ExampleForSequenceClassification",

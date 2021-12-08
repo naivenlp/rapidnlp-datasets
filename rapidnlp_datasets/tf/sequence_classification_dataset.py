@@ -3,7 +3,7 @@ import logging
 from typing import Dict, List
 
 import tensorflow as tf
-from naivenlp_datasets.sequence_classification import (
+from rapidnlp_datasets.sequence_classification import (
     CsvFileReaderForSequenceClassification,
     ExampleForSequenceClassification,
     ExampleParserForSequenceClassification,

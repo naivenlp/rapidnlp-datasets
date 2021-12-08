@@ -1,8 +1,8 @@
 # smile-datasets
 
-![Python package](https://github.com/naivenlp/naivenlp-datasets/workflows/Python%20package/badge.svg)
-[![PyPI version](https://badge.fury.io/py/naivenlp-datasets.svg)](https://badge.fury.io/py/naivenlp-datasets)
-[![Python](https://img.shields.io/pypi/pyversions/naivenlp-datasets.svg?style=plastic)](https://badge.fury.io/py/naivenlp-datasets)
+![Python package](https://github.com/naivenlp/rapidnlp-datasets/workflows/Python%20package/badge.svg)
+[![PyPI version](https://badge.fury.io/py/rapidnlp-datasets.svg)](https://badge.fury.io/py/rapidnlp-datasets)
+[![Python](https://img.shields.io/pypi/pyversions/rapidnlp-datasets.svg?style=plastic)](https://badge.fury.io/py/rapidnlp-datasets)
 
 
 Data pipelines for both **TensorFlow** and **PyTorch** !
@@ -17,7 +17,7 @@ If you want to load local, personal dataset with minimized boilerplate, use **na
 ## installation
 
 ```bash
-pip install -U naivenlp-datasets
+pip install -U rapidnlp-datasets
 ```
 
 > If you work with PyTorch, you should install [PyTorch](https://pytorch.org/get-started/locally/) first.

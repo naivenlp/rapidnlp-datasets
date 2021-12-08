@@ -1,7 +1,7 @@
 import os
 import unittest
 
-from naivenlp_datasets.question_answering import ExampleParserForQuestionAnswering, read_dureader_rubost
+from rapidnlp_datasets.question_answering import ExampleParserForQuestionAnswering, read_dureader_rubost
 
 
 class ExampleParserTest(unittest.TestCase):
@@ -33,7 +33,7 @@ class QuestionAnsweringDatasetTest(unittest.TestCase):
 
     def test_question_answering_dataset_pt(self):
         import torch
-        from naivenlp_datasets.pt import DatasetForQuestionAnswering
+        from rapidnlp_datasets.pt import DatasetForQuestionAnswering
 
         dataset = DatasetForQuestionAnswering.from_dureader_robust(
             input_files=os.path.join(os.environ["DUREADER_ROBUST_PATH"], "dev.json"),
@@ -48,7 +48,7 @@ class QuestionAnsweringDatasetTest(unittest.TestCase):
             print("NO.{} batch: \n{}".format(idx, batch))
 
     def test_question_answering_dataset_tf(self):
-        from naivenlp_datasets.tf import TFDatasetForQuestionAnswering
+        from rapidnlp_datasets.tf import TFDatasetForQuestionAnswering
 
         dataset, d = TFDatasetForQuestionAnswering.from_dureader_robust(
             input_files=os.path.join(os.environ["DUREADER_ROBUST_PATH"], "dev.json"),

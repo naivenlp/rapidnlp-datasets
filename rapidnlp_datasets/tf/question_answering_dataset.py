@@ -3,7 +3,7 @@ import logging
 from typing import Dict, List
 
 import tensorflow as tf
-from naivenlp_datasets.question_answering import (
+from rapidnlp_datasets.question_answering import (
     ExampleForQuestionAnswering,
     ExampleParserForQuestionAnswering,
     JsonlFileReaderForQuestionAnswering,

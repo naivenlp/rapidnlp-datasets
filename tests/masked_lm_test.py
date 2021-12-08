@@ -5,7 +5,7 @@ class DatasetTest(unittest.TestCase):
     """Dataset test"""
 
     def test_dataset_tf(self):
-        from naivenlp_datasets.tf import TFDatasetForMaksedLanguageModel
+        from rapidnlp_datasets.tf import TFDatasetForMaksedLanguageModel
 
         dataset, d = TFDatasetForMaksedLanguageModel.from_jsonl_files(
             input_files=["testdata/mlm.jsonl"],
@@ -29,7 +29,7 @@ class DatasetTest(unittest.TestCase):
 
     def test_dataset_pt(self):
         import torch
-        from naivenlp_datasets.pt import DatasetForMaskedLanguageModel
+        from rapidnlp_datasets.pt import DatasetForMaskedLanguageModel
 
         dataset = DatasetForMaskedLanguageModel.from_jsonl_files(
             input_files=["testdata/mlm.jsonl"],

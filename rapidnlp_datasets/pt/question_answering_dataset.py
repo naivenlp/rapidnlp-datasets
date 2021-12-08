@@ -1,7 +1,7 @@
 from typing import List
 
 import torch
-from naivenlp_datasets.question_answering import (
+from rapidnlp_datasets.question_answering import (
     ExampleForQuestionAnswering,
     ExampleParserForQuestionAnswering,
     JsonlFileReaderForQuestionAnswering,

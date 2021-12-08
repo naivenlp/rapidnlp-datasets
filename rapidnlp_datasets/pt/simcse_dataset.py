@@ -1,6 +1,6 @@
 from typing import List
 
-from naivenlp_datasets.simcse import (
+from rapidnlp_datasets.simcse import (
     CsvFileReaderForSimCSE,
     ExampleForSimCSE,
     ExampleParserForSimCSE,

@@ -6,7 +6,7 @@ class DatasetForSequenceClassificationTest(unittest.TestCase):
 
     def test_dataset_for_sequence_classification_pt(self):
         import torch
-        from naivenlp_datasets.pt import DatasetForSequenceClassification
+        from rapidnlp_datasets.pt import DatasetForSequenceClassification
 
         dataset = DatasetForSequenceClassification.from_jsonl_files(
             input_files=["testdata/sequence_classification.jsonl"],
@@ -21,7 +21,7 @@ class DatasetForSequenceClassificationTest(unittest.TestCase):
             print("NO.{} batch: \n{}".format(idx, batch))
 
     def test_dataset_for_sequence_classification_tf(self):
-        from naivenlp_datasets.tf import TFDatasetForSequenceClassifiation
+        from rapidnlp_datasets.tf import TFDatasetForSequenceClassifiation
 
         dataset, d = TFDatasetForSequenceClassifiation.from_jsonl_files(
             input_files=["testdata/sequence_classification.jsonl"],

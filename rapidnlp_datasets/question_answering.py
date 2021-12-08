@@ -6,7 +6,7 @@ from typing import Iterator, List
 
 from tokenizers import BertWordPieceTokenizer
 
-from naivenlp_datasets.readers import JsonlFileReader
+from rapidnlp_datasets.readers import JsonlFileReader
 
 from .charlevel_tokenizer import BertCharLevelTokenizer
 

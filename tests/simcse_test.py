@@ -5,7 +5,7 @@ class DatasetForSimCSETest(unittest.TestCase):
     """SimCSE dataset tests"""
 
     def test_unsup_simcse_tf(self):
-        from naivenlp_datasets.tf import TFDatasetForSimCSE, TFDatasetForUnsupSimCSE
+        from rapidnlp_datasets.tf import TFDatasetForSimCSE, TFDatasetForUnsupSimCSE
 
         dataset, d = TFDatasetForUnsupSimCSE.from_jsonl_files(
             input_files=["testdata/simcse.jsonl"],
@@ -51,7 +51,7 @@ class DatasetForSimCSETest(unittest.TestCase):
             print("No.{} batch: {}".format(idx, batch))
 
     def test_sup_simcse_tf(self):
-        from naivenlp_datasets.tf import TFDatasetForSimCSE, TFDatasetForSupervisedSimCSE
+        from rapidnlp_datasets.tf import TFDatasetForSimCSE, TFDatasetForSupervisedSimCSE
 
         dataset, d = TFDatasetForSupervisedSimCSE.from_jsonl_files(
             input_files=["testdata/simcse.jsonl"],
@@ -97,7 +97,7 @@ class DatasetForSimCSETest(unittest.TestCase):
             print("No.{} batch: {}".format(idx, batch))
 
     def test_hardneg_simcse_tf(self):
-        from naivenlp_datasets.tf import TFDatasetForHardNegativeSimCSE, TFDatasetForSimCSE
+        from rapidnlp_datasets.tf import TFDatasetForHardNegativeSimCSE, TFDatasetForSimCSE
 
         dataset, d = TFDatasetForHardNegativeSimCSE.from_jsonl_files(
             input_files=["testdata/simcse.jsonl"],
@@ -144,7 +144,7 @@ class DatasetForSimCSETest(unittest.TestCase):
 
     def test_simcse_pt(self):
         import torch
-        from naivenlp_datasets.pt import DatasetForSimCSE
+        from rapidnlp_datasets.pt import DatasetForSimCSE
 
         # unsup
         dataset = DatasetForSimCSE.from_jsonl_files(
