@@ -35,8 +35,8 @@ class QuestionAnsweringDatasetTest(unittest.TestCase):
         import torch
         from rapidnlp_datasets.pt import DatasetForQuestionAnswering
 
-        dataset = DatasetForQuestionAnswering.from_dureader_robust(
-            input_files=os.path.join(os.environ["DUREADER_ROBUST_PATH"], "dev.json"),
+        dataset = DatasetForQuestionAnswering.from_jsonl_files(
+            input_files="testdata/qa.jsonl",
             vocab_file="testdata/vocab.txt",
         )
         for idx, batch in enumerate(
@@ -50,8 +50,8 @@ class QuestionAnsweringDatasetTest(unittest.TestCase):
     def test_question_answering_dataset_tf(self):
         from rapidnlp_datasets.tf import TFDatasetForQuestionAnswering
 
-        dataset, d = TFDatasetForQuestionAnswering.from_dureader_robust(
-            input_files=os.path.join(os.environ["DUREADER_ROBUST_PATH"], "dev.json"),
+        dataset, d = TFDatasetForQuestionAnswering.from_jsonl_files(
+            input_files="testdata/qa.jsonl",
             vocab_file="testdata/vocab.txt",
             return_self=True,
         )
@@ -60,10 +60,10 @@ class QuestionAnsweringDatasetTest(unittest.TestCase):
             print("NO.{} batch: \n{}".format(idx, batch))
 
         print("Size of examples: ", len(d.examples))
-        d.save_tfrecord("testdata/dureader_robust.tfrecord")
+        d.save_tfrecord("testdata/qa.tfrecord")
 
         dataset = TFDatasetForQuestionAnswering.from_tfrecord_files(
-            "testdata/dureader_robust.tfrecord",
+            "testdata/qa.tfrecord",
             batch_size=32,
             padding="batch",
         )
