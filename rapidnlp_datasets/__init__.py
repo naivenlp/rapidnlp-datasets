@@ -1,10 +1,15 @@
 import logging
 
 from .charlevel_tokenizer import BertCharLevelTokenizer, CharLevelEncoding
-from .masked_lm import AbcMaskingForLanguageModel, ExampleForMaskedLanguageModel, WholeWordMaskingForLanguageModel
+from .masked_lm import (
+    AbcMaskingForLanguageModel,
+    DatasetForMaskedLanguageModel,
+    ExampleForMaskedLanguageModel,
+    WholeWordMaskingForLanguageModel,
+)
 from .parsers import AbstractExampleParser
 from .readers import AbstractFileReader, CsvFileReader, JsonlFileReader
-from .sequence_classification import ExampleForSequenceClassification, ExampleParserForSequenceClassification
+from .sequence_classification import DatasetForSequenceClassification, ExampleForSequenceClassification
 from .simcse import ExampleForSimCSE, ExampleParserForSimCSE
 from .token_classification import ExampleForTokenClassification, ExampleParserForTokenClassification
 

@@ -1,39 +1,46 @@
 import unittest
 
+from rapidnlp_datasets.sequence_classification import DatasetForSequenceClassification
+from tokenizers import BertWordPieceTokenizer
+
 
 class DatasetForSequenceClassificationTest(unittest.TestCase):
     """Dataset for sequence classification"""
 
     def test_dataset_for_sequence_classification_pt(self):
         import torch
-        from rapidnlp_datasets.pt import DatasetForSequenceClassification
 
-        dataset = DatasetForSequenceClassification.from_jsonl_files(
+        tokenizer = BertWordPieceTokenizer.from_file("testdata/vocab.txt")
+        dataset = DatasetForSequenceClassification(tokenizer)
+        dataset.add_jsonl_files(
             input_files=["testdata/sequence_classification.jsonl"],
-            vocab_file="testdata/vocab.txt",
+            num_parallels=None,
         )
+        pt_dataset = dataset.to_pt_dataset()
         for idx, batch in enumerate(
             torch.utils.data.DataLoader(
-                dataset, num_workers=2, shuffle=True, batch_size=32, collate_fn=dataset.batch_padding_collate
+                pt_dataset, num_workers=2, shuffle=True, batch_size=32, collate_fn=pt_dataset.batch_padding_collator
             )
         ):
             print()
             print("NO.{} batch: \n{}".format(idx, batch))
 
     def test_dataset_for_sequence_classification_tf(self):
-        from rapidnlp_datasets.tf import TFDatasetForSequenceClassifiation
-
-        dataset, d = TFDatasetForSequenceClassifiation.from_jsonl_files(
+        tokenizer = BertWordPieceTokenizer.from_file("testdata/vocab.txt")
+        dataset = DatasetForSequenceClassification(tokenizer)
+        dataset.add_jsonl_files(
             input_files=["testdata/sequence_classification.jsonl"],
-            vocab_file="testdata/vocab.txt",
-            return_self=True,
+            num_parallels=None,
         )
-        for idx, batch in enumerate(iter(dataset)):
+        tf_dataset = dataset.to_tf_dataset(batch_size=32)
+        for idx, batch in enumerate(iter(tf_dataset)):
             print()
             print("NO.{} batch: \n{}".format(idx, batch))
 
-        print("Size of examples: ", len(d.examples))
-        d.save_tfrecord("testdata/sequence_classification.tfrecord")
+        print("Size of examples: ", len(dataset.examples))
+        dataset.save_tfrecord("testdata/sequence_classification.tfrecord")
+
+        from rapidnlp_datasets.tf import TFDatasetForSequenceClassifiation
 
         dataset = TFDatasetForSequenceClassifiation.from_tfrecord_files("testdata/sequence_classification.tfrecord")
         for idx, batch in enumerate(iter(dataset)):
