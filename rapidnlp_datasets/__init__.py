@@ -8,7 +8,6 @@ from .masked_lm import (
     WholeWordMask,
 )
 from .parsers import AbstractExampleParser
-from .question_answering import ExampleForQuestionAnswering, ExampleParserForQuestionAnswering
 from .readers import AbstractFileReader, CsvFileReader, JsonlFileReader
 from .sequence_classification import ExampleForSequenceClassification, ExampleParserForSequenceClassification
 from .simcse import ExampleForSimCSE, ExampleParserForSimCSE
