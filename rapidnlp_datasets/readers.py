@@ -140,3 +140,18 @@ def read_jsonl_files(input_files, **kwargs):
                     continue
                 data = json.loads(line)
                 yield data
+
+
+def read_text_files(input_files, **kwargs):
+    if isinstance(input_files, str):
+        input_files = [input_files]
+    for f in input_files:
+        if not os.path.exists(f):
+            logging.warning("File %s does not exist, skipped.", f)
+            continue
+        with open(f, mode="rt", encoding="utf-8") as fin:
+            for line in fin:
+                line = line.strip()
+                if not line:
+                    continue
+                yield line

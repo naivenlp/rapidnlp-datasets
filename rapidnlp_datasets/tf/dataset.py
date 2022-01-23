@@ -8,7 +8,7 @@ class TFDataset(abc.ABC):
 
     def __init__(self, examples=None, **kwargs) -> None:
         super().__init__()
-        self.examples = examples
+        self.examples = examples or []
 
     def __call__(
         self,

@@ -1,14 +1,4 @@
-import logging
-from typing import List
-
 import tensorflow as tf
-from rapidnlp_datasets.masked_lm import (
-    CsvFileReaderForMaskedLanguageModel,
-    ExampleForMaskedLanguageModel,
-    ExampleParserForMaskedLanguageModel,
-    JsonlFileReaderForMaskedLanguageModel,
-    TextFileReaderForMaskedLanguageModel,
-)
 
 from . import utils
 from .dataset import TFDataset
@@ -17,98 +7,34 @@ from .dataset import TFDataset
 class TFDatasetForMaksedLanguageModel(TFDataset):
     """Dataset for masked lm in TensorFlow"""
 
-    def save_tfrecord(self, output_files, **kwargs):
-        """Save examples in tfrecord format"""
-
-        def _encode(example: ExampleForMaskedLanguageModel):
-            feature = {
-                "input_ids": utils.int64_feature([int(x) for x in example.input_ids]),
-                "segment_ids": utils.int64_feature([int(x) for x in example.segment_ids]),
-                "attention_mask": utils.int64_feature([int(x) for x in example.attention_mask]),
-                "masked_ids": utils.int64_feature([int(x) for x in example.masked_ids]),
-                "masked_pos": utils.int64_feature([int(x) for x in example.masked_pos]),
-            }
-            return feature
-
-        utils.save_tfrecord(self.examples, _encode, output_files, **kwargs)
-
-    @classmethod
-    def from_tfrecord_files(cls, input_files, **kwargs) -> tf.data.Dataset:
-        dataset = utils.read_tfrecord_files(input_files, **kwargs)
-        # parse example
-        num_parallel_calls = kwargs.get("num_parallel_calls", utils.AUTOTUNE)
-        buffer_size = kwargs.get("buffer_size", utils.AUTOTUNE)
-        features = {
-            "input_ids": tf.io.VarLenFeature(tf.int64),
-            "segment_ids": tf.io.VarLenFeature(tf.int64),
-            "attention_mask": tf.io.VarLenFeature(tf.int64),
-            "masked_ids": tf.io.VarLenFeature(tf.int64),
-            "masked_pos": tf.io.VarLenFeature(tf.int64),
-        }
-        dataset = dataset.map(
-            lambda x: tf.io.parse_example(x, features),
-            num_parallel_calls=num_parallel_calls,
-        ).prefetch(buffer_size)
-        dataset = dataset.map(
-            lambda x: (
-                tf.cast(tf.sparse.to_dense(x["input_ids"]), tf.int32),
-                tf.cast(tf.sparse.to_dense(x["segment_ids"]), tf.int32),
-                tf.cast(tf.sparse.to_dense(x["attention_mask"]), tf.int32),
-                tf.cast(tf.sparse.to_dense(x["masked_ids"]), tf.int32),
-                tf.cast(tf.sparse.to_dense(x["masked_pos"]), tf.int32),
-            ),
-            num_parallel_calls=num_parallel_calls,
-        ).prefetch(buffer_size)
-        # do transformation
-        d = cls(**kwargs)
-        return d(dataset, **kwargs)
-
-    @classmethod
-    def from_jsonl_files(cls, input_files, vocab_file, **kwargs) -> tf.data.Dataset:
-        reader = JsonlFileReaderForMaskedLanguageModel()
-        instances = reader.read_files(input_files, **kwargs)
-        return cls.from_instances(instances, vocab_file, **kwargs)
-
-    @classmethod
-    def from_text_files(cls, input_files, vocab_file, **kwargs) -> tf.data.Dataset:
-        reader = TextFileReaderForMaskedLanguageModel()
-        instances = reader.read_files(input_files, **kwargs)
-        return cls.from_instances(instances, vocab_file, **kwargs)
-
-    @classmethod
-    def from_csv_files(cls, input_files, vocab_file, **kwargs):
-        reader = CsvFileReaderForMaskedLanguageModel()
-        instances = reader.read_files(input_files, **kwargs)
-        return cls.from_instances(instances, vocab_file, **kwargs)
-
-    @classmethod
-    def from_instances(cls, instances, vocab_file, **kwargs) -> tf.data.Dataset:
-        parser = ExampleParserForMaskedLanguageModel(vocab_file, **kwargs)
-        examples = []
-        for e in parser.parse_instances(instances, **kwargs):
-            if not e:
-                continue
-            examples.append(e)
-        return cls.from_examples(examples, **kwargs)
-
-    @classmethod
-    def from_examples(
-        cls,
-        examples: List[ExampleForMaskedLanguageModel],
-        max_sequence_length=512,
-        return_self=False,
-        verbose=True,
+    def __init__(
+        self,
+        examples,
+        max_predictions=20,
+        input_ids="input_ids",
+        token_type_ids="token_type_ids",
+        attention_mask="attention_mask",
+        masked_positions="masked_pos",
+        masked_ids="masked_ids",
         **kwargs
-    ) -> tf.data.Dataset:
-        "Parse examples to tf.data.Dataset"
-        examples = [e for e in examples if len(e.input_ids) <= max_sequence_length]
-        if not examples:
-            logging.warning("examples is empty or null, skipped to build dataset.")
-            return None
-        if verbose:
-            n = min(5, len(examples))
-            for i in range(n):
-                logging.info("Showing NO.%d example: %s", i, examples[i])
+    ) -> None:
+        super().__init__(examples, **kwargs)
+        self.max_predictions = max_predictions
+        self.input_ids = input_ids
+        self.token_type_ids = token_type_ids
+        self.attention_mask = attention_mask
+        self.masked_positions = masked_positions
+        self.masked_ids = masked_ids
+
+    def parse_examples_to_dataset(self):
+        input_ids, token_type_ids, attention_mask = [], [], []
+        masked_pos, masked_ids = [], []
+        for x in self.examples:
+            input_ids.append(x.input_ids)
+            token_type_ids.append(x.token_type_ids)
+            attention_mask.append(x.attention_mask)
+            masked_pos.append(x.masked_pos)
+            masked_ids.append(x.masked_ids)
 
         def _to_dataset(x, dtype=tf.int32):
             x = tf.ragged.constant(x, dtype=dtype)
@@ -119,17 +45,63 @@ class TFDatasetForMaksedLanguageModel(TFDataset):
         # conver examples to dataset
         dataset = tf.data.Dataset.zip(
             (
-                _to_dataset([e.input_ids for e in examples], dtype=tf.int32),
-                _to_dataset([e.segment_ids for e in examples], dtype=tf.int32),
-                _to_dataset([e.attention_mask for e in examples], dtype=tf.int32),
-                _to_dataset([e.masked_ids for e in examples], dtype=tf.int32),
-                _to_dataset([e.masked_pos for e in examples], dtype=tf.int32),
+                _to_dataset(input_ids, dtype=tf.int32),
+                _to_dataset(token_type_ids, dtype=tf.int32),
+                _to_dataset(attention_mask, dtype=tf.int32),
+                _to_dataset(masked_ids, dtype=tf.int32),
+                _to_dataset(masked_pos, dtype=tf.int32),
             )
         )
-        # do transformation
-        d = cls(examples=examples, **kwargs)
-        if return_self:
-            return d(dataset, **kwargs), d
+        return dataset
+
+    @classmethod
+    def from_tfrecord_files(
+        cls,
+        input_files,
+        max_predictions=20,
+        input_ids="input_ids",
+        token_type_ids="token_type_ids",
+        attention_mask="attention_mask",
+        masked_positions="masked_pos",
+        masked_ids="masked_ids",
+        **kwargs
+    ) -> tf.data.Dataset:
+        d = cls(
+            examples=None,
+            max_predictions=max_predictions,
+            input_ids=input_ids,
+            token_type_ids=token_type_ids,
+            attention_mask=attention_mask,
+            masked_positions=masked_positions,
+            masked_ids=masked_ids,
+            **kwargs,
+        )
+
+        dataset = utils.read_tfrecord_files(input_files, **kwargs)
+        # parse example
+        num_parallel_calls = kwargs.get("num_parallel_calls", utils.AUTOTUNE)
+        buffer_size = kwargs.get("buffer_size", utils.AUTOTUNE)
+        features = {
+            d.input_ids: tf.io.VarLenFeature(tf.int64),
+            d.token_type_ids: tf.io.VarLenFeature(tf.int64),
+            d.attention_mask: tf.io.VarLenFeature(tf.int64),
+            d.masked_ids: tf.io.VarLenFeature(tf.int64),
+            d.masked_positions: tf.io.VarLenFeature(tf.int64),
+        }
+        dataset = dataset.map(
+            lambda x: tf.io.parse_example(x, features),
+            num_parallel_calls=num_parallel_calls,
+        ).prefetch(buffer_size)
+        dataset = dataset.map(
+            lambda x: (
+                tf.cast(tf.sparse.to_dense(x[d.input_ids]), tf.int32),
+                tf.cast(tf.sparse.to_dense(x[d.token_type_ids]), tf.int32),
+                tf.cast(tf.sparse.to_dense(x[d.attention_mask]), tf.int32),
+                tf.cast(tf.sparse.to_dense(x[d.masked_ids]), tf.int32),
+                tf.cast(tf.sparse.to_dense(x[d.masked_positions]), tf.int32),
+            ),
+            num_parallel_calls=num_parallel_calls,
+        ).prefetch(buffer_size)
         return d(dataset, **kwargs)
 
     def _filter(self, dataset: tf.data.Dataset, do_filter=True, max_sequence_length=512, **kwargs) -> tf.data.Dataset:
@@ -158,27 +130,30 @@ class TFDatasetForMaksedLanguageModel(TFDataset):
 
     def _fixed_padding(self, dataset: tf.data.Dataset, pad_id=0, max_sequence_length=512, **kwargs) -> tf.data.Dataset:
         maxlen = tf.constant(max_sequence_length, dtype=tf.int32)
+        maxpred = tf.constant(self.max_predictions, dtype=tf.int32)
         pad_id = tf.constant(pad_id, dtype=tf.int32)
         # fmt: off
-        padded_shapes = kwargs.get("padded_shapes", ([maxlen, ], [maxlen, ], [maxlen, ], [maxlen, ], [maxlen]))
+        padded_shapes = kwargs.get("padded_shapes", ([maxlen, ], [maxlen, ], [maxlen, ], [maxpred, ], [maxpred]))
         padding_values = kwargs.get("padding_values", (pad_id, pad_id, pad_id, pad_id, pad_id))
         # fmt: on
         dataset = utils.batching_and_padding(dataset, padded_shapes, padding_values, **kwargs)
         return dataset
 
     def _batch_padding(self, dataset: tf.data.Dataset, pad_id=0, **kwargs) -> tf.data.Dataset:
+        maxpred = tf.constant(self.max_predictions, dtype=tf.int32)
         pad_id = tf.constant(pad_id, dtype=tf.int32)
         # fmt: off
-        padded_shapes = kwargs.get("padded_shapes", ([None, ], [None, ], [None, ], [None, ], [None, ]))
+        padded_shapes = kwargs.get("padded_shapes", ([None, ], [None, ], [None, ], [maxpred, ], [maxpred, ]))
         padding_values = kwargs.get("padding_values", (pad_id, pad_id, pad_id, pad_id, pad_id))
         # fmt: on
         dataset = utils.batching_and_padding(dataset, padded_shapes, padding_values, **kwargs)
         return dataset
 
     def _bucket_padding(self, dataset: tf.data.Dataset, pad_id=0, **kwargs) -> tf.data.Dataset:
+        maxpred = tf.constant(self.max_predictions, dtype=tf.int32)
         pad_id = tf.constant(pad_id, dtype=tf.int32)
         # fmt: off
-        padded_shapes = kwargs.get("padded_shapes", ([None, ], [None, ], [None, ], [None, ], [None, ]))
+        padded_shapes = kwargs.get("padded_shapes", ([None, ], [None, ], [None, ], [maxpred, ], [maxpred, ]))
         padding_values = kwargs.get("padding_values", (pad_id, pad_id, pad_id, pad_id, pad_id))
         # fmt: on
         dataset = utils.bucketing_and_padding(

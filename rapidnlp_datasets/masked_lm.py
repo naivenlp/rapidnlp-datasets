@@ -1,33 +1,28 @@
 import abc
 import logging
-import os
+import multiprocessing
 import random
-import re
 from collections import namedtuple
+from typing import List
 
 from tokenizers import BertWordPieceTokenizer
 
-from .parsers import AbstractExampleParser
-from .readers import AbstractFileReader, CsvFileReader, JsonlFileReader
+from rapidnlp_datasets import readers
 
 ExampleForMaskedLanguageModel = namedtuple(
-    "ExampleForMaskedLanguageModel",
-    ["tokens", "input_ids", "segment_ids", "attention_mask", "masked_ids", "masked_pos"],
+    "ExampleForMaskedLanguageModel", ["input_ids", "token_type_ids", "attention_mask", "masked_ids", "masked_pos"]
 )
 
 
-ResultForMasking = namedtuple("ResultForMasking", ["origin_tokens", "masked_tokens", "masked_indexes"])
-
-
-class AbstractMaskingStrategy(abc.ABC):
+class AbcMaskingForLanguageModel(abc.ABC):
     """Abstract masking strategy"""
 
     @abc.abstractmethod
-    def __call__(self, tokens, **kwargs) -> ResultForMasking:
+    def __call__(self, tokens, **kwargs):
         raise NotImplementedError()
 
 
-class WholeWordMask(AbstractMaskingStrategy):
+class WholeWordMaskingForLanguageModel(AbcMaskingForLanguageModel):
     """Default masking strategy from BERT."""
 
     def __init__(
@@ -39,9 +34,10 @@ class WholeWordMask(AbstractMaskingStrategy):
         self.rand_prob = rand_prob / (mask_prob + rand_prob + keep_prob)
         self.keep_prob = keep_prob / (mask_prob + rand_prob + keep_prob)
         self.max_predictions = max_predictions
+        # special tokens
+        self.special_tokens = set(["[PAD]", "[CLS]", "[SEP]", "[MASK]"])
 
-    def __call__(self, tokens, max_sequence_length=512, **kwargs) -> ResultForMasking:
-        tokens = self._truncate_sequence(tokens, max_sequence_length - 2)
+    def __call__(self, tokens, **kwargs):
         if not tokens:
             return None
         num_to_predict = min(self.max_predictions, max(1, round(self.change_prob * len(tokens))))
@@ -61,11 +57,8 @@ class WholeWordMask(AbstractMaskingStrategy):
                 masked_tokens[index] = self._masking_tokens(index, tokens, self.vocabs)
 
         # add special tokens
-        tokens = ["[CLS]"] + tokens + ["[SEP]"]
-        masked_tokens = ["[CLS]"] + masked_tokens + ["[SEP]"]
-        masked_indexes = [0] + masked_indexes + [0]
         assert len(tokens) == len(masked_tokens) == len(masked_indexes)
-        return ResultForMasking(origin_tokens=tokens, masked_tokens=masked_tokens, masked_indexes=masked_indexes)
+        return {"tokens": tokens, "masked_tokens": masked_tokens, "masked_indexes": masked_indexes}
 
     def _masking_tokens(self, index, tokens, vocabs, **kwargs):
         # 80% of the time, replace with [MASK]
@@ -82,6 +75,8 @@ class WholeWordMask(AbstractMaskingStrategy):
     def _collect_candidates(self, tokens):
         cand_indexes = [[]]
         for idx, token in enumerate(tokens):
+            if token in self.special_tokens:
+                continue
             if cand_indexes and token.startswith("##"):
                 cand_indexes[-1].append(idx)
                 continue
@@ -89,86 +84,223 @@ class WholeWordMask(AbstractMaskingStrategy):
         random.shuffle(cand_indexes)
         return cand_indexes
 
-    def _truncate_sequence(self, tokens, max_tokens=512, **kwargs):
-        while len(tokens) > max_tokens:
-            if len(tokens) > max_tokens:
-                tokens.pop(0)
-                # truncate whole world
-                while tokens and tokens[0].startswith("##"):
-                    tokens.pop(0)
-            if len(tokens) > max_tokens:
-                while tokens and tokens[-1].startswith("##"):
-                    tokens.pop()
-                if tokens:
-                    tokens.pop()
-        return tokens
+
+class AbcDatasetForMaskedLanguageModel(abc.ABC):
+    """Abstract dataset for MLM"""
+
+    @abc.abstractmethod
+    def to_pt_dataset(self):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def to_tf_dataset(self):
+        raise NotImplementedError()
 
 
-class JsonlFileReaderForMaskedLanguageModel(JsonlFileReader):
-    """Jsonl file reader for mlm"""
+class DatasetForMaskedLanguageModel(AbcDatasetForMaskedLanguageModel):
+    """Dataset for MLM"""
 
-    def _parse_instance(self, data, sequence_column="sequence", **kwargs):
-        return {"sequence": data[sequence_column]}
-
-
-class CsvFileReaderForMaskedLanguageModel(CsvFileReader):
-    """Csv file reader for mlm"""
-
-    def _parse_instance(self, line, sequence_column=0, sep=",", **kwargs):
-        parts = re.split(sep, line)
-        return {"sequence": parts[sequence_column]}
-
-
-class TextFileReaderForMaskedLanguageModel(AbstractFileReader):
-    """Text file reader for mlm"""
-
-    def read_files(self, input_files, **kwargs):
-        if isinstance(input_files, str):
-            input_files = [input_files]
-        for f in input_files:
-            if not os.path.exists(f) or not os.path.isfile(f):
-                logging.warning("File %d does not exist, skipped.", f)
-                continue
-            with open(f, mode="rt", encoding="utf-8") as fin:
-                for line in fin:
-                    line = line.strip()
-                    if not line:
-                        continue
-                    instance = {"sequence": line}
-                    yield instance
-
-
-class ExampleParserForMaskedLanguageModel(AbstractExampleParser):
-    """Parse instance to ExampleForMaskedLanguageModel"""
-
-    def __init__(self, vocab_file, masking="whole-word-mask", do_lower_case=True, **kwargs) -> None:
+    def __init__(
+        self,
+        tokenizer: BertWordPieceTokenizer,
+        examples: List[ExampleForMaskedLanguageModel] = None,
+        max_sequence_length=512,
+        change_prob=0.15,
+        mask_prob=0.8,
+        rand_prob=0.1,
+        keep_prob=0.1,
+        max_predictions=20,
+        **kwargs
+    ) -> None:
         super().__init__()
-        self.tokenizer = BertWordPieceTokenizer.from_file(vocab_file, lowercase=do_lower_case)
-        vocabs = list(self.tokenizer.get_vocab().keys())
-        assert masking in ["whole-word-mask"]
-        if masking == "whole-word-mask":
-            self.masking = WholeWordMask(vocabs=vocabs, **kwargs)
-        else:
-            self.masking = None
-
-    def parse_instance(self, instance, max_sequence_length=512, **kwargs):
-        sequence = instance["sequence"]
-        encoding = self.tokenizer.encode(sequence, add_special_tokens=False)
-        masking_results = self.masking(tokens=encoding.tokens, max_sequence_length=max_sequence_length, **kwargs)
-        origin_tokens, masked_tokens = masking_results.origin_tokens, masking_results.masked_tokens
-        example = ExampleForMaskedLanguageModel(
-            tokens=masked_tokens,
-            input_ids=[self.tokenizer.token_to_id(x) for x in masked_tokens],
-            segment_ids=[0] * len(masked_tokens),
-            attention_mask=[1] * len(masked_tokens),
-            masked_ids=[self.tokenizer.token_to_id(x) for x in origin_tokens],
-            masked_pos=masking_results.masked_indexes,
+        self.max_sequence_length = max_sequence_length
+        self.tokenizer = tokenizer
+        self.masking = WholeWordMaskingForLanguageModel(
+            vocabs=list(self.tokenizer.get_vocab().keys()),
+            change_prob=change_prob,
+            mask_prob=mask_prob,
+            rand_prob=rand_prob,
+            keep_prob=keep_prob,
+            max_predictions=max_predictions,
+            **kwargs
         )
-        return example
 
-    def parse_instances(self, instances, max_sequence_length=512, **kwargs):
-        for instance in instances:
-            e = self.parse_instance(instance, max_sequence_length=max_sequence_length, **kwargs)
-            if not e:
+        self.examples = examples or []
+
+    def to_pt_dataset(self, **kwargs):
+        from rapidnlp_datasets.pt.masked_lm_dataset import PTDatasetForMaskedLanguageModel
+
+        dataset = PTDatasetForMaskedLanguageModel(
+            self.examples,
+            max_sequence_length=self.max_sequence_length,
+            input_ids=kwargs.pop("input_ids", "input_ids"),
+            token_type_ids=kwargs.pop("token_type_ids", "token_type_ids"),
+            attention_mask=kwargs.pop("attention_mask", "attention_mask"),
+            labels=kwargs.pop("labels", "labels"),
+            **kwargs
+        )
+        return dataset
+
+    def save_tfrecord(
+        self,
+        output_files,
+        input_ids="input_ids",
+        token_type_ids="token_type_ids",
+        attention_mask="attention_mask",
+        masked_positions="masked_pos",
+        masked_ids="masked_ids",
+        **kwargs
+    ):
+        """Save examples in tfrecord format"""
+        from rapidnlp_datasets import utils_tf as utils
+
+        def _encode(example: ExampleForMaskedLanguageModel):
+            feature = {
+                input_ids: utils.int64_feature([int(x) for x in example.input_ids]),
+                token_type_ids: utils.int64_feature([int(x) for x in example.token_type_ids]),
+                attention_mask: utils.int64_feature([int(x) for x in example.attention_mask]),
+                masked_ids: utils.int64_feature([int(x) for x in example.masked_ids]),
+                masked_positions: utils.int64_feature([int(x) for x in example.masked_pos]),
+            }
+            return feature
+
+        utils.save_tfrecord(self.examples, _encode, output_files, **kwargs)
+
+    def to_tf_dataset(
+        self,
+        batch_size=32,
+        pad_id=0,
+        padding="bucket",
+        num_buckets=8,
+        bucket_boundaries=[64, 128, 192, 256, 320, 384, 448],
+        bucket_batch_sizes=None,
+        drop_remainder=False,
+        do_filter=True,
+        do_repeat=False,
+        repeat_count=None,
+        do_shuffle=True,
+        shuffle_buffer_size=1000000,
+        shuffle_seed=None,
+        reshuffle_each_iteration=True,
+        to_dict=True,
+        auto_shard_policy=None,
+        **kwargs
+    ):
+        from rapidnlp_datasets.tf.masked_lm_dataset import TFDatasetForMaksedLanguageModel
+
+        d = TFDatasetForMaksedLanguageModel(
+            self.examples,
+            max_predictions=self.masking.max_predictions,
+            input_ids=kwargs.pop("input_ids", "input_ids"),
+            token_type_ids=kwargs.pop("token_type_ids", "token_type_ids"),
+            attention_mask=kwargs.pop("attention_mask", "attention_mask"),
+            masked_positions=kwargs.pop("masked_positions", "masked_pos"),
+            masked_ids=kwargs.pop("masked_ids", "masked_ids"),
+            **kwargs
+        )
+        dataset = d.parse_examples_to_dataset()
+        dataset = d(
+            dataset,
+            batch_size=batch_size,
+            pad_id=pad_id,
+            max_sequence_length=self.max_sequence_length,
+            padding=padding,
+            num_buckets=num_buckets,
+            bucket_boundaries=bucket_boundaries,
+            bucket_batch_sizes=bucket_batch_sizes,
+            drop_remainder=drop_remainder,
+            do_filter=do_filter,
+            do_repeat=do_repeat,
+            repeat_count=repeat_count,
+            do_shuffle=do_shuffle,
+            shuffle_buffer_size=shuffle_buffer_size,
+            shuffle_seed=shuffle_seed,
+            reshuffle_each_iteration=reshuffle_each_iteration,
+            to_dict=to_dict,
+            auto_shard_policy=auto_shard_policy,
+            **kwargs
+        )
+        return dataset
+
+    def add_jsonl_files(self, input_files, sequence_column="sequence", **kwargs):
+        instances = []
+        for data in readers.read_jsonl_files(input_files, **kwargs):
+            if not data:
                 continue
-            yield e
+            sequence = data[sequence_column].strip()
+            if not sequence:
+                continue
+            instances.append({"sequence": sequence})
+        return self.add_instances(instances, **kwargs)
+
+    def add_text_files(self, input_files, **kwargs):
+        instances = []
+        for line in readers.read_text_files(input_files, **kwargs):
+            if not line:
+                continue
+            instances.append({"sequence": line})
+        return self.add_instances(instances, **kwargs)
+
+    def add_csv_files(self, input_files, sequence_column=0, sep=",", **kwargs):
+        instances = []
+        for parts in readers.read_csv_files(input_files, sep=sep, **kwargs):
+            if not parts:
+                continue
+            sequence = parts[sequence_column].strip()
+            if not sequence:
+                continue
+            instances.append({"sequence": sequence})
+        return self.add_instances(instances, **kwargs)
+
+    def add_instances(self, instances, num_parallels=4, chunksize=1000, **kwargs):
+        if num_parallels is None or num_parallels < 1:
+            examples = self._parse_examples_sequential(instances, **kwargs)
+            return self.add_examples(examples, **kwargs)
+        # parallel mode
+        pool = multiprocessing.Pool(num_parallels)
+        futures = []
+        for idx in range(0, len(instances), chunksize):
+            chunk_instances = instances[idx : idx + chunksize]
+            f = pool.apply_async(self._parse_examples_sequential, (chunk_instances,), **kwargs)
+            futures.append(f)
+        logging.info("Added %d tasks to process pool.", len(futures))
+        pool.close()
+        logging.info("Process pool closed, waiting for tasks to complete.")
+        pool.join()
+        examples = []
+        for f in futures:
+            examples.extend(f.get())
+        return self.add_examples(examples, **kwargs)
+
+    def add_examples(self, examples, **kwargs):
+        valid_examples = []
+        for e in examples:
+            if len(e.input_ids) > self.max_sequence_length:
+                continue
+            valid_examples.append(e)
+        self.examples.extend(valid_examples)
+        logging.info("Added %d examples.", len(valid_examples))
+        return self
+
+    def _parse_examples_sequential(self, instances, **kwargs):
+        examples = []
+        for instance in instances:
+            encoding = self.tokenizer.encode(instance["sequence"], add_special_tokens=True)
+            outputs = self.masking(encoding.tokens, **kwargs)
+            input_ids = [self.tokenizer.token_to_id(x) for x in outputs["masked_tokens"]]
+            token_type_ids, attention_mask = [0] * len(input_ids), [1] * len(input_ids)
+            masked_ids, masked_pos = [], []
+            for idx, masked in enumerate(outputs["masked_indexes"]):
+                if masked:
+                    masked_pos.append(idx)
+                    masked_ids.append(outputs["tokens"][idx])
+            masked_ids = [self.tokenizer.token_to_id(x) for x in masked_ids]
+            e = ExampleForMaskedLanguageModel(
+                input_ids=input_ids,
+                token_type_ids=token_type_ids,
+                attention_mask=attention_mask,
+                masked_ids=masked_ids,
+                masked_pos=masked_pos,
+            )
+            examples.append(e)
+        return examples

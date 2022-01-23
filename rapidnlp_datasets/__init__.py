@@ -1,12 +1,7 @@
 import logging
 
 from .charlevel_tokenizer import BertCharLevelTokenizer, CharLevelEncoding
-from .masked_lm import (
-    AbstractMaskingStrategy,
-    ExampleForMaskedLanguageModel,
-    ExampleParserForMaskedLanguageModel,
-    WholeWordMask,
-)
+from .masked_lm import AbcMaskingForLanguageModel, ExampleForMaskedLanguageModel, WholeWordMaskingForLanguageModel
 from .parsers import AbstractExampleParser
 from .readers import AbstractFileReader, CsvFileReader, JsonlFileReader
 from .sequence_classification import ExampleForSequenceClassification, ExampleParserForSequenceClassification
