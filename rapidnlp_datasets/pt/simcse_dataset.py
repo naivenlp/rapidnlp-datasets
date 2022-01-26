@@ -1,116 +1,17 @@
-from typing import List
-
-from rapidnlp_datasets.simcse import (
-    CsvFileReaderForSimCSE,
-    ExampleForSimCSE,
-    ExampleParserForSimCSE,
-    JsonlFileReaderForSimCSE,
-)
-
-from . import utils
-from .dataset import PTDataset
+import torch
 
 
-class DatasetForSimCSE(PTDataset):
+class PTDatasetForSimCSE(torch.utils.data.Dataset):
     """Dataset for SimCSE in PyTorch"""
 
-    @classmethod
-    def from_jsonl_files(
-        cls,
-        input_files,
-        vocab_file,
-        sequence_column="sequence",
-        with_pos_sequence=False,
-        with_neg_sequence=False,
-        pos_sequence_column="pos_sequence",
-        neg_sequence_column="neg_sequence",
-        **kwargs
-    ):
-        reader = JsonlFileReaderForSimCSE(
-            with_pos_sequence=with_pos_sequence,
-            with_neg_sequence=with_neg_sequence,
-            sequence_column=sequence_column,
-            pos_sequence_column=pos_sequence_column,
-            neg_sequence_column=neg_sequence_column,
-            **kwargs
-        )
-        instances = reader.read_files(input_files, **kwargs)
-        return cls.from_instances(
-            instances, vocab_file, with_pos_sequence=with_pos_sequence, with_neg_sequence=with_neg_sequence, **kwargs
-        )
-
-    @classmethod
-    def from_csv_files(
-        cls,
-        input_files,
-        vocab_file,
-        sep=",",
-        sequence_column=0,
-        with_pos_sequence=False,
-        with_neg_sequence=False,
-        pos_sequence_column=1,
-        neg_sequence_column=2,
-        **kwargs
-    ):
-        reader = CsvFileReaderForSimCSE(
-            with_pos_sequence=with_pos_sequence,
-            with_neg_sequence=with_neg_sequence,
-            sequence_column=sequence_column,
-            pos_sequence_column=pos_sequence_column,
-            neg_sequence_column=neg_sequence_column,
-            **kwargs
-        )
-        instances = reader.read_files(input_files, sep=sep, **kwargs)
-        return cls.from_instances(
-            instances, vocab_file, with_pos_sequence=with_pos_sequence, with_neg_sequence=with_neg_sequence, **kwargs
-        )
-
-    @classmethod
-    def from_instances(
-        cls, instances, vocab_file, with_pos_sequence=False, with_neg_sequence=False, add_special_tokens=True, **kwargs
-    ):
-        parser = ExampleParserForSimCSE(
-            vocab_file, with_pos_sequence=with_pos_sequence, with_neg_sequence=with_neg_sequence, **kwargs
-        )
-        examples = []
-        for e in parser.parse_instances(instances, add_special_tokens=add_special_tokens, **kwargs):
-            if not e:
-                continue
-            examples.append(e)
-        return cls.from_examples(
-            examples, with_pos_sequence=with_pos_sequence, with_neg_sequence=with_neg_sequence, **kwargs
-        )
-
-    @classmethod
-    def from_examples(
-        cls,
-        examples: List[ExampleForSimCSE],
-        with_pos_sequence=False,
-        with_neg_sequence=False,
-        max_sequence_length=512,
-        **kwargs
-    ):
-        valid_examples = []
-        for e in examples:
-            if len(e.input_ids) > max_sequence_length:
-                continue
-            if with_pos_sequence and len(e.pos_input_ids) > max_sequence_length:
-                continue
-            if with_neg_sequence and len(e.neg_input_ids) > max_sequence_length:
-                continue
-            valid_examples.append(e)
-
-        return cls(
-            examples=valid_examples, with_pos_sequence=with_pos_sequence, with_neg_sequence=with_neg_sequence, **kwargs
-        )
-
     def __init__(
-        self, examples: List[ExampleForSimCSE], with_pos_sequence=False, with_neg_sequence=False, **kwargs
+        self, examples, max_sequence_length=512, with_positive_sequence=False, with_negative_sequence=False, **kwargs
     ) -> None:
         super().__init__(**kwargs)
         self.examples = examples
-        self.with_pos_sequence = with_pos_sequence
-        self.with_neg_sequence = with_neg_sequence
+        self.max_sequence_length = max_sequence_length
+        self.with_positive_sequence = with_positive_sequence
+        self.with_negative_sequence = with_negative_sequence
 
     def __len__(self):
         return len(self.examples)
@@ -119,50 +20,64 @@ class DatasetForSimCSE(PTDataset):
         e = self.examples[index]
         features = {
             "input_ids": e.input_ids,
-            "segment_ids": e.segment_ids,
+            "token_type_ids": e.token_type_ids,
             "attention_mask": e.attention_mask,
         }
-        if self.with_pos_sequence:
+        if self.with_positive_sequence:
             features.update(
                 {
                     "pos_input_ids": e.pos_input_ids,
-                    "pos_segment_ids": e.pos_segment_ids,
+                    "pos_token_type_ids": e.pos_token_type_ids,
                     "pos_attention_mask": e.pos_attention_mask,
                 }
             )
-        if self.with_neg_sequence:
+        if self.with_negative_sequence:
             features.update(
                 {
                     "neg_input_ids": e.neg_input_ids,
-                    "neg_segment_ids": e.neg_segment_ids,
+                    "neg_token_type_ids": e.neg_token_type_ids,
                     "neg_attention_mask": e.neg_attention_mask,
                 }
             )
-        return features, None
+        return features
+
+    def _padding_group(self, batch, max_length, prefix=""):
+        input_ids, token_type_ids, attention_mask = [], [], []
+        for x in batch:
+            delta = max_length - len(x[prefix + "input_ids"])
+            input_ids.append(x[prefix + "input_ids"] + [0] * delta)
+            token_type_ids.append(x[prefix + "token_type_ids"] + [0] * delta)
+            attention_mask.append(x[prefix + "attention_mask"] + [0] * delta)
+        return {
+            prefix + "input_ids": torch.LongTensor(input_ids),
+            prefix + "token_type_ids": torch.LongTensor(token_type_ids),
+            prefix + "attention_mask": torch.LongTensor(attention_mask),
+        }
+
+    def _padding(self, batch, max_length):
+        inputs = {}
+        inputs.update(self._padding_group(batch, max_length, prefix=""))
+        if self.with_positive_sequence:
+            inputs.update(self._padding_group(batch, max_length, prefix="pos_"))
+        if self.with_negative_sequence:
+            inputs.update(self._padding_group(batch, max_length, prefix="neg_"))
+        return inputs
 
     @property
-    def batch_padding_collate(self):
+    def batch_padding_collator(self):
         """Padding sequence to max length in batch"""
 
         def _collate_fn(batch):
-            max_length = 0
-            max_length = max([max_length] + [len(x["input_ids"]) for x, _ in batch])
-            if self.with_pos_sequence:
-                max_length = max([max_length] + [len(x["pos_input_ids"]) for x, _ in batch])
-            if self.with_neg_sequence:
-                max_length = max([max_length] + [len(x["neg_input_ids"]) for x, _ in batch])
-            padded_features = utils.padding_features([x for x, _ in batch], pad_id=self.pad_id, max_length=max_length)
-            return padded_features, None
+            max_length = max([len(x["input_ids"]) for x in batch])
+            return self._padding(batch, max_length)
 
         return _collate_fn
 
     @property
-    def fixed_padding_collate(self):
+    def fixed_padding_collator(self):
         """Padding sequence to a fixed length"""
 
         def _collate_fn(batch):
-            max_length = self.max_sequence_length
-            padded_features = utils.padding_features([x for x, _ in batch], pad_id=self.pad_id, max_length=max_length)
-            return padded_features, None
+            return self._padding(batch, self.max_sequence_length)
 
         return _collate_fn
