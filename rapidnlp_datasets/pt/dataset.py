@@ -21,10 +21,10 @@ class PTDataset(torch.utils.data.Dataset):
 
     @property
     @abc.abstractmethod
-    def batch_padding_collate(self):
+    def batch_padding_collator(self):
         raise NotImplementedError()
 
     @property
     @abc.abstractmethod
-    def fixed_padding_collate(self):
+    def fixed_padding_collator(self):
         raise NotImplementedError()

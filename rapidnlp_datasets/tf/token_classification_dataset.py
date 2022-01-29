@@ -1,13 +1,6 @@
 import logging
-from typing import List
 
 import tensorflow as tf
-from rapidnlp_datasets.token_classification import (
-    ConllFileReaderForTokenClassification,
-    ExampleForTokenClassification,
-    ExampleParserForTokenClassification,
-    JsonlFileReaderForTokenClassification,
-)
 
 from . import utils
 from .dataset import TFDataset
@@ -16,85 +9,60 @@ from .dataset import TFDataset
 class TFDatasetForTokenClassification(TFDataset):
     """Dataset for token classification in TensorFlow"""
 
-    def save_tfrecord(self, output_files, **kwargs):
-        """Save examples in tfrecord format"""
-
-        def _encode(example: ExampleForTokenClassification):
-            feature = {
-                "input_ids": utils.int64_feature([int(x) for x in example.input_ids]),
-                "segment_ids": utils.int64_feature([int(x) for x in example.segment_ids]),
-                "attention_mask": utils.int64_feature([int(x) for x in example.attention_mask]),
-                "label_ids": utils.int64_feature([int(x) for x in example.label_ids]),
-            }
-            return feature
-
-        utils.save_tfrecord(self.examples, _encode, output_files, **kwargs)
+    def __init__(self, examples=None, **kwargs) -> None:
+        super().__init__(examples, **kwargs)
+        self.input_ids = kwargs.pop("input_ids", "input_ids")
+        self.token_type_ids = kwargs.pop("token_type_ids", "token_type_ids")
+        self.attention_mask = kwargs.pop("attention_mask", "attention_mask")
+        self.labels = kwargs.pop("labels", "labels")
 
     @classmethod
-    def from_conll_files(cls, input_files, vocab_file, label_to_id, sep="\t", **kwargs) -> tf.data.Dataset:
-        reader = ConllFileReaderForTokenClassification()
-        instances = reader.read_files(input_files, sep=sep, **kwargs)
-        return cls.from_instances(instances, vocab_file, label_to_id, **kwargs)
-
-    @classmethod
-    def from_jsonl_files(cls, input_files, vocab_file, label_to_id, **kwargs) -> tf.data.Dataset:
-        reader = JsonlFileReaderForTokenClassification()
-        instances = reader.read_files(input_files, **kwargs)
-        return cls.from_instances(instances, vocab_file, label_to_id, **kwargs)
-
-    @classmethod
-    def from_tfrecord_files(cls, input_files, num_parallel_calls=None, buffer_size=None, **kwargs) -> tf.data.Dataset:
+    def from_tfrecord_files(
+        cls,
+        input_files,
+        input_ids="input_ids",
+        token_type_ids="token_type_ids",
+        attention_mask="attention_mask",
+        labels="labels",
+        **kwargs
+    ) -> tf.data.Dataset:
         dataset = utils.read_tfrecord_files(input_files, **kwargs)
-        num_parallel_calls = num_parallel_calls or utils.AUTOTUNE
-        buffer_size = buffer_size or utils.AUTOTUNE
         # parse example
         features = {
-            "input_ids": tf.io.VarLenFeature(tf.int64),
-            "segment_ids": tf.io.VarLenFeature(tf.int64),
-            "attention_mask": tf.io.VarLenFeature(tf.int64),
-            "label_ids": tf.io.VarLenFeature(tf.int64),
+            input_ids: tf.io.VarLenFeature(tf.int64),
+            token_type_ids: tf.io.VarLenFeature(tf.int64),
+            attention_mask: tf.io.VarLenFeature(tf.int64),
+            labels: tf.io.VarLenFeature(tf.int64),
         }
         dataset = dataset.map(
             lambda x: tf.io.parse_example(x, features),
-            num_parallel_calls=num_parallel_calls,
-        ).prefetch(buffer_size)
+            num_parallel_calls=utils.AUTOTUNE,
+        ).prefetch(utils.AUTOTUNE)
         dataset = dataset.map(
             lambda x: (
-                tf.cast(tf.sparse.to_dense(x["input_ids"]), tf.int32),
-                tf.cast(tf.sparse.to_dense(x["segment_ids"]), tf.int32),
-                tf.cast(tf.sparse.to_dense(x["attention_mask"]), tf.int32),
-                tf.cast(tf.sparse.to_dense(x["label_ids"]), tf.int32),
+                tf.cast(tf.sparse.to_dense(x[input_ids]), tf.int32),
+                tf.cast(tf.sparse.to_dense(x[token_type_ids]), tf.int32),
+                tf.cast(tf.sparse.to_dense(x[attention_mask]), tf.int32),
+                tf.cast(tf.sparse.to_dense(x[labels]), tf.int32),
             ),
-            num_parallel_calls=num_parallel_calls,
-        ).prefetch(buffer_size)
+            num_parallel_calls=utils.AUTOTUNE,
+        ).prefetch(utils.AUTOTUNE)
         # do transformation
-        d = cls(**kwargs)
+        d = cls(
+            examples=None, input_ids=input_ids, token_type_ids=token_type_ids, attention_mask=attention_mask, **kwargs
+        )
         return d(dataset, **kwargs)
 
-    @classmethod
-    def from_instances(
-        cls, instances, vocab_file, label_to_id, tokenization="bert-wordpiece", **kwargs
-    ) -> tf.data.Dataset:
-        parser = ExampleParserForTokenClassification(vocab_file, label_to_id, tokenization=tokenization, **kwargs)
-        examples = []
-        for e in parser.parse_instances(instances, **kwargs):
-            if not e:
-                continue
-            examples.append(e)
-        return cls.from_examples(examples, **kwargs)
-
-    @classmethod
-    def from_examples(
-        cls, examples: List[ExampleForTokenClassification], return_self=False, verbose=True, **kwargs
-    ) -> tf.data.Dataset:
-        if not examples:
-            logging.warning("examples is empty or null, skipped to build dataset.")
+    def parse_examples_to_dataset(self):
+        if not self.examples:
+            logging.info("self.examples is empty or None, skipped.")
             return None
-
-        if verbose:
-            n = min(5, len(examples))
-            for i in range(n):
-                logging.info("Showing NO.%d example: %s", i, examples[i])
+        input_ids, token_type_ids, attention_mask, labels = [], [], [], []
+        for e in self.examples:
+            input_ids.append(e.input_ids)
+            token_type_ids.append(e.token_type_ids)
+            attention_mask.append(e.attention_mask)
+            labels.append(e.label_ids)
 
         # parse examples to dataset
         def _to_dataset(x, dtype=tf.int32):
@@ -105,17 +73,13 @@ class TFDatasetForTokenClassification(TFDataset):
 
         dataset = tf.data.Dataset.zip(
             (
-                _to_dataset([e.input_ids for e in examples]),
-                _to_dataset([e.segment_ids for e in examples]),
-                _to_dataset([e.attention_mask for e in examples]),
-                _to_dataset([e.label_ids for e in examples]),
+                _to_dataset(input_ids),
+                _to_dataset(token_type_ids),
+                _to_dataset(attention_mask),
+                _to_dataset(labels),
             )
         )
-        # do transformation
-        d = cls(examples=examples, **kwargs)
-        if return_self:
-            return d(dataset, **kwargs), d
-        return d(dataset, **kwargs)
+        return dataset
 
     def _filter(self, dataset: tf.data.Dataset, do_filer=True, max_sequence_length=512, **kwargs) -> tf.data.Dataset:
         if not do_filer:
