@@ -36,22 +36,12 @@ class DatasetForQuestionAnswering(AbcDatasetForQuestionAnswering):
         tokenizer: Union[BertWordPieceTokenizer, BertCharLevelTokenizer],
         examples: List[ExampleForQuestionAnswering] = None,
         max_sequence_length=512,
-        input_ids="input_ids",
-        token_type_ids="token_type_ids",
-        attention_mask="attention_mask",
-        start_positions="start_positions",
-        end_positions="end_positions",
         sep_token="[SEP]",
         **kwargs
     ) -> None:
         super().__init__()
         self.tokenizer = tokenizer
         self.max_sequence_length = max_sequence_length
-        self.input_ids = input_ids
-        self.token_type_ids = token_type_ids
-        self.attention_mask = attention_mask
-        self.start_positions = start_positions
-        self.end_positions = end_positions
         self.sep_token = sep_token
 
         self.examples = examples or []
@@ -62,11 +52,11 @@ class DatasetForQuestionAnswering(AbcDatasetForQuestionAnswering):
         dataset = PTDatasetForQuestionAnswering(
             self.examples,
             max_sequence_length=self.max_sequence_length,
-            input_ids=self.input_ids,
-            token_type_ids=self.token_type_ids,
-            attention_mask=self.attention_mask,
-            start_positions=self.start_positions,
-            end_positions=self.end_positions,
+            input_ids=kwargs.pop("input_ids", "input_ids"),
+            token_type_ids=kwargs.pop("token_type_ids", "token_type_ids"),
+            attention_mask=kwargs.pop("attention_mask", "attention_mask"),
+            start_positions=kwargs.pop("start_positions", "start_positions"),
+            end_positions=kwargs.pop("end_positions", "end_positions"),
         )
         return dataset
 
@@ -94,11 +84,11 @@ class DatasetForQuestionAnswering(AbcDatasetForQuestionAnswering):
 
         d = TFDatasetForQuestionAnswering(
             self.examples,
-            input_ids=self.input_ids,
-            token_type_ids=self.token_type_ids,
-            attention_mask=self.attention_mask,
-            start_positions=self.start_positions,
-            end_positions=self.end_positions,
+            input_ids=kwargs.pop("input_ids", "input_ids"),
+            token_type_ids=kwargs.pop("token_type_ids", "token_type_ids"),
+            attention_mask=kwargs.pop("attention_mask", "attention_mask"),
+            start_positions=kwargs.pop("start_positions", "start_positions"),
+            end_positions=kwargs.pop("end_positions", "end_positions"),
             **kwargs
         )
         dataset = d.parse_examples_to_dataset()
@@ -128,15 +118,21 @@ class DatasetForQuestionAnswering(AbcDatasetForQuestionAnswering):
     def save_tfrecord(self, output_files, **kwargs):
         """Save examples to tfrecord"""
 
+        input_ids = kwargs.pop("input_ids", "input_ids")
+        token_type_ids = kwargs.pop("token_type_ids", "token_type_ids")
+        attention_mask = kwargs.pop("attention_mask", "attention_mask")
+        start_positions = kwargs.pop("start_positions", "start_positions")
+        end_positions = kwargs.pop("end_positions", "end_positions")
+
         from rapidnlp_datasets import utils_tf as utils
 
         def _encoding(example):
             feature = {
-                self.input_ids: utils.int64_feature([int(x) for x in example.input_ids]),
-                self.token_type_ids: utils.int64_feature([int(x) for x in example.token_type_ids]),
-                self.attention_mask: utils.int64_feature([int(x) for x in example.attention_mask]),
-                self.start_positions: utils.int64_feature([int(example.start_positions)]),
-                self.end_positions: utils.int64_feature([int(example.end_positions)]),
+                input_ids: utils.int64_feature([int(x) for x in example.input_ids]),
+                token_type_ids: utils.int64_feature([int(x) for x in example.token_type_ids]),
+                attention_mask: utils.int64_feature([int(x) for x in example.attention_mask]),
+                start_positions: utils.int64_feature([int(example.start_positions)]),
+                end_positions: utils.int64_feature([int(example.end_positions)]),
             }
             return feature
 

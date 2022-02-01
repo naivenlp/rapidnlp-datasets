@@ -1,6 +1,4 @@
-import abc
 import logging
-from typing import Dict, List
 
 import tensorflow as tf
 
@@ -27,21 +25,13 @@ class TFDatasetForSequenceClassifiation(TFDataset):
         self.label = label
 
     @classmethod
-    def from_tfrecord_files(
-        cls,
-        input_files,
-        input_ids="input_ids",
-        token_type_ids="token_type_ids",
-        attention_mask="attention_mask",
-        label="label",
-        **kwargs
-    ) -> tf.data.Dataset:
+    def from_tfrecord_files(cls, input_files, **kwargs) -> tf.data.Dataset:
         d = cls(
             examples=None,
-            input_ids=input_ids,
-            token_type_ids=token_type_ids,
-            attention_mask=attention_mask,
-            label=label,
+            input_ids=kwargs.pop("input_ids", "input_ids"),
+            token_type_ids=kwargs.pop("token_type_ids", "token_type_ids"),
+            attention_mask=kwargs.pop("attention_mask", "attention_mask"),
+            label=kwargs.pop("label", "label"),
             **kwargs,
         )
         num_parallel_calls = utils.AUTOTUNE

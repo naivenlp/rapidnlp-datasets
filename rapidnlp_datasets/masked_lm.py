@@ -141,17 +141,14 @@ class DatasetForMaskedLanguageModel(AbcDatasetForMaskedLanguageModel):
         )
         return dataset
 
-    def save_tfrecord(
-        self,
-        output_files,
-        input_ids="input_ids",
-        token_type_ids="token_type_ids",
-        attention_mask="attention_mask",
-        masked_positions="masked_pos",
-        masked_ids="masked_ids",
-        **kwargs
-    ):
+    def save_tfrecord(self, output_files, **kwargs):
         """Save examples in tfrecord format"""
+        input_ids = kwargs.pop("input_ids", "input_ids")
+        token_type_ids = kwargs.pop("token_type_ids", "token_type_ids")
+        attention_mask = kwargs.pop("attention_mask", "attention_mask")
+        masked_positions = kwargs.pop("masked_positions", "masked_positions")
+        masked_ids = kwargs.pop("masked_ids", "masked_ids")
+
         from rapidnlp_datasets import utils_tf as utils
 
         def _encode(example: ExampleForMaskedLanguageModel):

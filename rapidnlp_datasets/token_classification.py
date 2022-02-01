@@ -50,16 +50,12 @@ class DatasetForTokenClassification(AbcDatasetForTokenClassification):
         )
         return dataset
 
-    def save_tfrecord(
-        self,
-        output_files,
-        input_ids="input_ids",
-        token_type_ids="token_type_ids",
-        attention_mask="attention_mask",
-        labels="labels",
-        **kwargs
-    ):
+    def save_tfrecord(self, output_files, **kwargs):
         """Save examples in tfrecord format"""
+        input_ids = kwargs.pop("input_ids", "input_ids")
+        token_type_ids = kwargs.pop("token_type_ids", "token_type_ids")
+        attention_mask = kwargs.pop("attention_mask", "attention_mask")
+        labels = kwargs.pop("labels", "labels")
 
         from rapidnlp_datasets import utils_tf as utils
 

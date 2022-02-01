@@ -41,37 +41,27 @@ class DatasetForSequenceClassification(AbcDatasetForSequenceClassificarion):
 
         self.max_sequence_length = max_sequence_length
 
-    def to_pt_dataset(
-        self,
-        input_ids="input_ids",
-        token_type_ids="token_type_ids",
-        attention_mask="attention_mask",
-        label="label",
-        **kwargs
-    ):
+    def to_pt_dataset(self, **kwargs):
         from rapidnlp_datasets.pt.sequence_classification_dataset import PTDatasetForSequenceClassification
 
         dataset = PTDatasetForSequenceClassification(
             self.examples,
             max_sequence_length=self.max_sequence_length,
-            input_ids=input_ids,
-            token_type_ids=token_type_ids,
-            attention_mask=attention_mask,
-            label=label,
+            input_ids=kwargs.pop("input_ids", "input_ids"),
+            token_type_ids=kwargs.pop("token_type_ids", "token_type_ids"),
+            attention_mask=kwargs.pop("attention_mask", "attention_mask"),
+            label=kwargs.pop("label", "label"),
             **kwargs
         )
         return dataset
 
-    def save_tfrecord(
-        self,
-        output_files,
-        input_ids="input_ids",
-        token_type_ids="token_type_ids",
-        attention_mask="attention_mask",
-        label="label",
-        **kwargs
-    ):
+    def save_tfrecord(self, output_files, **kwargs):
         """Save examples to tfrecord"""
+        input_ids = kwargs.pop("input_ids", "input_ids")
+        token_type_ids = kwargs.pop("token_type_ids", "token_type_ids")
+        attention_mask = kwargs.pop("attention_mask", "attention_mask")
+        label = kwargs.pop("label", "label")
+
         from rapidnlp_datasets import utils_tf as utils
 
         def _encode(example):
@@ -106,20 +96,16 @@ class DatasetForSequenceClassification(AbcDatasetForSequenceClassificarion):
         reshuffle_each_iteration=True,
         auto_shard_policy=None,
         to_dict=True,
-        input_ids="input_ids",
-        token_type_ids="token_type_ids",
-        attention_mask="attention_mask",
-        label="label",
         **kwargs
     ):
         from rapidnlp_datasets.tf.sequence_classification_dataset import TFDatasetForSequenceClassifiation
 
         d = TFDatasetForSequenceClassifiation(
             self.examples,
-            input_ids=input_ids,
-            token_type_ids=token_type_ids,
-            attention_mask=attention_mask,
-            label=label,
+            input_ids=kwargs.pop("input_ids", "input_ids"),
+            token_type_ids=kwargs.pop("token_type_ids", "token_type_ids"),
+            attention_mask=kwargs.pop("attention_mask", "attention_mask"),
+            label=kwargs.pop("label", "label"),
             **kwargs
         )
         dataset = d.parse_examples_to_dataset()

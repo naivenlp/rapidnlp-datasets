@@ -55,25 +55,15 @@ class TFDatasetForMaksedLanguageModel(TFDataset):
         return dataset
 
     @classmethod
-    def from_tfrecord_files(
-        cls,
-        input_files,
-        max_predictions=20,
-        input_ids="input_ids",
-        token_type_ids="token_type_ids",
-        attention_mask="attention_mask",
-        masked_positions="masked_pos",
-        masked_ids="masked_ids",
-        **kwargs
-    ) -> tf.data.Dataset:
+    def from_tfrecord_files(cls, input_files, max_predictions=20, **kwargs) -> tf.data.Dataset:
         d = cls(
             examples=None,
             max_predictions=max_predictions,
-            input_ids=input_ids,
-            token_type_ids=token_type_ids,
-            attention_mask=attention_mask,
-            masked_positions=masked_positions,
-            masked_ids=masked_ids,
+            input_ids=kwargs.pop("input_ids", "input_ids"),
+            token_type_ids=kwargs.pop("token_type_ids", "token_type_ids"),
+            attention_mask=kwargs.pop("attention_mask", "attention_mask"),
+            masked_positions=kwargs.pop("masked_positions", "masked_positions"),
+            masked_ids=kwargs.pop("masked_ids", "masked_ids"),
             **kwargs,
         )
 
@@ -121,8 +111,8 @@ class TFDatasetForMaksedLanguageModel(TFDataset):
             return dataset
         dataset = dataset.map(
             lambda a, b, c, x, y: (
-                {"input_ids": a, "segment_ids": b, "attention_mask": c},
-                {"masked_ids": x, "masked_pos": y},
+                {self.input_ids: a, self.token_type_ids: b, self.attention_mask: c},
+                {self.masked_ids: x, self.masked_positions: y},
             ),
             num_parallel_calls=num_parallel_calls,
         ).prefetch(buffer_size)

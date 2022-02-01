@@ -54,71 +54,39 @@ class TFDatasetForQuestionAnswering(TFDataset):
         )
         return dataset
 
-    def save_tfrecord(self, output_files, **kwargs):
-        """Save examples to tfrecord"""
-
-        def _encoding(example):
-            feature = {
-                self.input_ids: utils.int64_feature([int(x) for x in example.input_ids]),
-                self.token_type_ids: utils.int64_feature([int(x) for x in example.token_type_ids]),
-                self.attention_mask: utils.int64_feature([int(x) for x in example.attention_mask]),
-                self.start_positions: utils.int64_feature([int(example.start_positions)]),
-                self.end_positions: utils.int64_feature([int(example.end_positions)]),
-            }
-            return feature
-
-        if not self.examples:
-            logging.warning("self.examples is empty or None, skippped")
-            return
-        utils.save_tfrecord(self.examples, _encoding, output_files, **kwargs)
-
     @classmethod
-    def from_tfrecord_files(
-        cls,
-        input_files,
-        num_parallel_calls=None,
-        buffer_size=None,
-        input_ids="input_ids",
-        token_type_ids="token_type_ids",
-        attention_mask="attention_mask",
-        start_positions="start_positions",
-        end_positions="end_positions",
-        **kwargs
-    ) -> tf.data.Dataset:
+    def from_tfrecord_files(cls, input_files, **kwargs) -> tf.data.Dataset:
+        d = cls(
+            input_ids=kwargs.pop("input_ids", "input_ids"),
+            token_type_ids=kwargs.pop("token_type_ids", "token_type_ids"),
+            attention_mask=kwargs.pop("attention_mask", "attention_mask"),
+            start_positions=kwargs.pop("start_positions", "start_positions"),
+            end_positions=kwargs.pop("end_positions", "end_positions"),
+            **kwargs,
+        )
         dataset = utils.read_tfrecord_files(input_files, **kwargs)
-        num_parallel_calls = num_parallel_calls or utils.AUTOTUNE
-        buffer_size = buffer_size or utils.AUTOTUNE
         # parse examples
         features = {
-            input_ids: tf.io.VarLenFeature(tf.int64),
-            token_type_ids: tf.io.VarLenFeature(tf.int64),
-            attention_mask: tf.io.VarLenFeature(tf.int64),
-            start_positions: tf.io.VarLenFeature(tf.int64),
-            end_positions: tf.io.VarLenFeature(tf.int64),
+            d.input_ids: tf.io.VarLenFeature(tf.int64),
+            d.token_type_ids: tf.io.VarLenFeature(tf.int64),
+            d.attention_mask: tf.io.VarLenFeature(tf.int64),
+            d.start_positions: tf.io.VarLenFeature(tf.int64),
+            d.end_positions: tf.io.VarLenFeature(tf.int64),
         }
         dataset = dataset.map(
             lambda x: tf.io.parse_example(x, features),
-            num_parallel_calls=num_parallel_calls,
-        ).prefetch(buffer_size)
+            num_parallel_calls=utils.AUTOTUNE,
+        ).prefetch(utils.AUTOTUNE)
         dataset = dataset.map(
             lambda x: (
-                tf.cast(tf.sparse.to_dense(x[input_ids]), tf.int32),
-                tf.cast(tf.sparse.to_dense(x[token_type_ids]), tf.int32),
-                tf.cast(tf.sparse.to_dense(x[attention_mask]), tf.int32),
-                tf.cast(tf.squeeze(tf.sparse.to_dense(x[start_positions])), tf.int32),
-                tf.cast(tf.squeeze(tf.sparse.to_dense(x[end_positions])), tf.int32),
+                tf.cast(tf.sparse.to_dense(x[d.input_ids]), tf.int32),
+                tf.cast(tf.sparse.to_dense(x[d.token_type_ids]), tf.int32),
+                tf.cast(tf.sparse.to_dense(x[d.attention_mask]), tf.int32),
+                tf.cast(tf.squeeze(tf.sparse.to_dense(x[d.start_positions])), tf.int32),
+                tf.cast(tf.squeeze(tf.sparse.to_dense(x[d.end_positions])), tf.int32),
             ),
-            num_parallel_calls=num_parallel_calls,
-        ).prefetch(buffer_size)
-        # do transformation
-        d = cls(
-            input_ids=input_ids,
-            token_type_ids=token_type_ids,
-            attention_mask=attention_mask,
-            start_positions=start_positions,
-            end_positions=end_positions,
-            **kwargs,
-        )
+            num_parallel_calls=utils.AUTOTUNE,
+        ).prefetch(utils.AUTOTUNE)
         return d(dataset, **kwargs)
 
     def _filter(self, dataset: tf.data.Dataset, do_filter=True, max_sequence_length=512, **kwargs) -> tf.data.Dataset:

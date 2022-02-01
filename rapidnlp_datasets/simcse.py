@@ -98,26 +98,36 @@ class DatasetForSimCSE(AbcDatasetForSimCSE):
         return dataset
 
     def save_tfrecord(self, output_files, **kwargs):
+        input_ids = kwargs.pop("input_ids", "input_ids")
+        token_type_ids = kwargs.pop("token_type_ids", "token_type_ids")
+        attention_mask = kwargs.pop("attention_mask", "attention_mask")
+        pos_input_ids = kwargs.pop("pos_input_ids", "pos_input_ids")
+        pos_token_type_ids = kwargs.pop("pos_token_type_ids", "pos_token_type_ids")
+        pos_attention_mask = kwargs.pop("pos_attention_mask", "pos_attention_mask")
+        neg_input_ids = kwargs.pop("neg_input_ids", "neg_input_ids")
+        neg_token_type_ids = kwargs.pop("neg_token_type_ids", "neg_token_type_ids")
+        neg_attention_mask = kwargs.pop("neg_attention_mask", "neg_attention_mask")
+
         from rapidnlp_datasets import utils_tf as utils
 
         def _encoding(example: ExampleForSimCSE):
             seq_feature = {
-                "input_ids": utils.int64_feature([int(x) for x in example.input_ids]),
-                "token_type_ids": utils.int64_feature([int(x) for x in example.token_type_ids]),
-                "attention_mask": utils.int64_feature([int(x) for x in example.attention_mask]),
+                input_ids: utils.int64_feature([int(x) for x in example.input_ids]),
+                token_type_ids: utils.int64_feature([int(x) for x in example.token_type_ids]),
+                attention_mask: utils.int64_feature([int(x) for x in example.attention_mask]),
             }
             pos_feature, neg_feature = {}, {}
             if self.with_positive_sequence:
                 pos_feature = {
-                    "pos_input_ids": utils.int64_feature([int(x) for x in example.pos_input_ids]),
-                    "pos_token_type_ids": utils.int64_feature([int(x) for x in example.pos_token_type_ids]),
-                    "pos_attention_mask": utils.int64_feature([int(x) for x in example.pos_attention_mask]),
+                    pos_input_ids: utils.int64_feature([int(x) for x in example.pos_input_ids]),
+                    pos_token_type_ids: utils.int64_feature([int(x) for x in example.pos_token_type_ids]),
+                    pos_attention_mask: utils.int64_feature([int(x) for x in example.pos_attention_mask]),
                 }
             if self.with_negative_sequence:
                 neg_feature = {
-                    "neg_input_ids": utils.int64_feature([int(x) for x in example.neg_input_ids]),
-                    "neg_token_type_ids": utils.int64_feature([int(x) for x in example.neg_token_type_ids]),
-                    "neg_attention_mask": utils.int64_feature([int(x) for x in example.neg_attention_mask]),
+                    neg_input_ids: utils.int64_feature([int(x) for x in example.neg_input_ids]),
+                    neg_token_type_ids: utils.int64_feature([int(x) for x in example.neg_token_type_ids]),
+                    neg_attention_mask: utils.int64_feature([int(x) for x in example.neg_attention_mask]),
                 }
             seq_feature.update(pos_feature)
             seq_feature.update(neg_feature)
